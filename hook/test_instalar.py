@@ -261,7 +261,7 @@ class InstalarAvisarTest(unittest.TestCase):
         self.assertIn('os.environ.get("ATLAS_SESSAO_ID")', antes_do_stdin)
 
     def test_atualiza_com_backup_uma_vez_e_idempotente(self):
-        antigo = '#!/usr/bin/env python3\nprint("antigo")\n'
+        antigo = '#!/usr/bin/env python3\nimport os\nos.environ.get("ATLAS_SESSAO_ID")\nprint("antigo")\n'
         with open(self.vivo, 'w', encoding='utf-8') as f:
             f.write(antigo)
         os.chmod(self.vivo, 0o755)
@@ -275,11 +275,50 @@ class InstalarAvisarTest(unittest.TestCase):
         self.assertEqual(len(self.backups()), 1)
         self.assertEqual(sorted(os.listdir(self.hooks)), sorted(['avisar.py'] + self.backups()), 'sem temporário sobrando')
 
+    def test_avisar_proprio_da_pessoa_nunca_e_trocado(self):
+        proprio = '#!/usr/bin/env python3\nprint("meu aviso")\n'
+        with open(self.vivo, 'w', encoding='utf-8') as f:
+            f.write(proprio)
+        self.assertFalse(instalar.instalar_avisar(self.base))
+        self.assertEqual(self.ler(), proprio)
+        self.assertEqual(self.backups(), [])
+
     def test_sem_arquivo_instala_sem_backup(self):
         os.remove(self.vivo) if os.path.exists(self.vivo) else None
         self.assertTrue(instalar.instalar_avisar(self.base))
         self.assertEqual(self.ler(), self.repo)
         self.assertEqual(self.backups(), [])
+
+
+class InstalarSalvarTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.base = os.path.join(self.tmp.name, '.claude')
+        self.comando = os.path.join(self.base, 'commands', 'salvar.md')
+        with open(os.path.join(AQUI, '..', 'comandos', 'salvar.md'), encoding='utf-8') as f:
+            self.repo = f.read()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_sem_salvar_instala_o_generico_uma_vez(self):
+        self.assertTrue(instalar.instalar_salvar(self.base))
+        with open(self.comando, encoding='utf-8') as f:
+            self.assertEqual(f.read(), self.repo)
+        self.assertFalse(instalar.instalar_salvar(self.base))
+
+    def test_comando_proprio_nunca_e_trocado(self):
+        os.makedirs(os.path.dirname(self.comando))
+        with open(self.comando, 'w', encoding='utf-8') as f:
+            f.write('meu salvar')
+        self.assertFalse(instalar.instalar_salvar(self.base))
+        with open(self.comando, encoding='utf-8') as f:
+            self.assertEqual(f.read(), 'meu salvar')
+
+    def test_skill_propria_impede_a_instalacao(self):
+        os.makedirs(os.path.join(self.base, 'skills', 'salvar'))
+        self.assertFalse(instalar.instalar_salvar(self.base))
+        self.assertFalse(os.path.exists(self.comando))
 
 
 if __name__ == '__main__':

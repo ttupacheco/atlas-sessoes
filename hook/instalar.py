@@ -92,8 +92,10 @@ def instalar_uso(base=None):
 
 
 def instalar_avisar(base=None):
-    """Troca ~/.claude/hooks/avisar.py pela cópia do repo (que se cala dentro do Atlas).
-    Idempotente: igual não mexe. Backup do anterior uma vez por dia, gravação atômica."""
+    """Põe em ~/.claude/hooks/avisar.py a cópia do repo (que se cala dentro do Atlas).
+    Só cria quando não existe ou atualiza uma cópia anterior do Atlas (que cita ATLAS_SESSAO_ID):
+    um avisar.py próprio da pessoa nunca é trocado. Idempotente: igual não mexe. Backup do
+    anterior uma vez por dia, gravação atômica."""
     base = base or os.path.expanduser('~/.claude')
     aqui = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(aqui, 'avisar.py'), encoding='utf-8') as f:
@@ -104,8 +106,9 @@ def instalar_avisar(base=None):
     existe = os.path.exists(caminho)
     if existe:
         with open(caminho, encoding='utf-8') as f:
-            if f.read() == novo:
-                return False
+            atual = f.read()
+        if atual == novo or 'ATLAS_SESSAO_ID' not in atual:
+            return False
         backup = caminho + '.bak-atlas-' + datetime.date.today().isoformat()
         if not os.path.exists(backup):
             shutil.copy2(caminho, backup)
@@ -123,7 +126,21 @@ def instalar_avisar(base=None):
             os.remove(temp)
     return True
 
+def instalar_salvar(base=None):
+    """Põe o /salvar genérico (comandos/salvar.md) em ~/.claude/commands, só se a pessoa ainda
+    não tem um /salvar (comando ou skill). Nunca troca nem atualiza um que já exista."""
+    base = base or os.path.expanduser('~/.claude')
+    comando = os.path.join(base, 'commands', 'salvar.md')
+    if os.path.exists(comando) or os.path.exists(os.path.join(base, 'skills', 'salvar')):
+        return False
+    aqui = os.path.dirname(os.path.abspath(__file__))
+    os.makedirs(os.path.dirname(comando), exist_ok=True)
+    shutil.copyfile(os.path.join(aqui, '..', 'comandos', 'salvar.md'), comando)
+    return True
+
+
 if __name__ == '__main__':
     print('settings atualizado' if instalar() else 'ja estava instalado')
     print('status line atualizada' if instalar_uso() else 'status line sem mudanca')
     print('avisar.py atualizado' if instalar_avisar() else 'avisar.py sem mudanca')
+    print('/salvar instalado' if instalar_salvar() else '/salvar ja existia, sem mudanca')

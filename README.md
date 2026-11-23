@@ -1,37 +1,65 @@
 # Atlas
 
-App do Mac que abre várias sessões do Claude Code lado a lado, cada uma com um cartão colorido que mostra o estado: trabalhando, pede aprovação, pronta, sem sinal, encerrada.
+App de Mac que abre várias sessões do [Claude Code](https://claude.com/claude-code) lado a lado. Cada sessão ganha um cartão colorido que mostra o estado dela: trabalhando, pede aprovação, pronta, sem sinal ou encerrada. Os cartões podem ser organizados em grupos, e uma chamada curta ao Haiku sugere o grupo de cada sessão nova.
 
-## Abrir
+## Requisitos
 
-`/Applications/Atlas.app`, pelo Dock, pelo Spotlight ou pelo atalho **Atlas** na Mesa.
+- Mac com chip Apple (M1 ou mais novo). O app é gerado só para `arm64` e não roda no Windows nem no Linux.
+- [Claude Code](https://claude.com/claude-code) instalado e funcionando no Terminal (comando `claude`).
+- Node.js 20 ou mais novo e npm.
+- Python 3 (`python3`), usado pelos hooks.
+- zsh como shell (o padrão do macOS). As sessões são abertas por um zsh de login.
 
-## Atualizar
+## Instalar
 
-Peça ao Claude: **"atualiza o Atlas"**. Ele roda `./atualizar.sh` nesta pasta, que:
+```sh
+git clone https://github.com/ttupacheco/atlas-sessoes.git
+cd atlas-sessoes
+./scripts/criar-certificado.sh   # uma vez só
+./atualizar.sh
+```
 
-1. instala as dependências e roda os testes (app e hook);
-2. gera o app e assina com a identidade **Atlas Local** (sempre a mesma, para o macOS não pedir de novo as permissões);
-3. reinstala o hook no Claude (`hook/instalar.py`);
-4. manda o app antigo para o Lixo, instala o novo em `/Applications`, refaz o atalho na Mesa e abre o Atlas (com ambiente limpo, sem nada da sessão que pediu a atualização).
+1. `scripts/criar-certificado.sh` cria no Keychain de login uma identidade de assinatura chamada **Atlas Local** (autoassinada, válida por 10 anos). Assinar sempre com ela faz o macOS reconhecer o Atlas como o mesmo app a cada atualização, sem pedir as permissões de novo.
+2. `./atualizar.sh` instala as dependências, roda os testes, gera o app, assina, instala em `/Applications/Atlas.app` (o anterior vai para o Lixo), cria um atalho na Mesa, instala os hooks no Claude Code e abre o Atlas.
 
-**Pedido de dentro do Atlas** (o caso normal): o script gera, assina e confere, e responde "Pronto para instalar. Feche o Atlas com ⌘Q quando quiser: ele será atualizado e reabrirá sozinho." Nada é fechado: quando você fechar o Atlas (até 2 h depois), a troca acontece sozinha e o Atlas reabre. O andamento fica em `dist/atualizacao.log`. Pedir de novo antes de fechar cancela a espera anterior e prepara a nova.
+Para atualizar depois, rode `git pull` e de novo `./atualizar.sh`. Se o Atlas estiver aberto, o script pergunta antes de fechar. Pedido de dentro de uma sessão do próprio Atlas, ele prepara tudo e só troca o app quando você fechar o Atlas com ⌘Q.
 
-**Pedido de fora do Atlas** (Terminal comum): se o Atlas estiver aberto, pergunta antes de fechar; com sessão trabalhando, o próprio Atlas confirma na janela dele.
+## O que a instalação mexe no seu `~/.claude`
 
-Se algo falhar, ele para e diz o que foi. A identidade Atlas Local é criada uma vez só, com `scripts/criar-certificado.sh` (fica no Keychain de login, vale 10 anos).
+O instalador (`hook/instalar.py`) é idempotente e guarda uma cópia com data (`.bak-atlas-AAAA-MM-DD`) antes de alterar um arquivo seu:
 
-## Onde ficam as coisas
+- **`settings.json`**: registra o hook `~/.claude/hooks/atlas-estado.py` nos eventos do Claude Code. O comando só chama o Python quando a sessão foi aberta pelo Atlas (variável `ATLAS_SESSAO_ID`); no Terminal comum ele não faz nada.
+- **`hooks/avisar.py`**: o aviso do Mac quando uma sessão termina ou pede aprovação. O instalador só cria este arquivo quando ele não existe, ou atualiza uma cópia anterior do Atlas. Um `avisar.py` seu nunca é trocado.
+- **`commands/salvar.md`**: veja "Salvar antes de fechar" abaixo.
 
-- Sessões abertas, com o nome, o título da conversa e a cor de cada uma: `~/Library/Application Support/Atlas/sessoes.json`
-- Eventos de estado das sessões: `~/.claude/atlas/` (um arquivo por sessão, gravado pelo hook `~/.claude/hooks/atlas-estado.py`). Sessões abertas no Terminal comum não gravam nada aqui (o comando do hook só chama o python quando a sessão é do Atlas). O arquivo de uma sessão é apagado quando ela é fechada.
-- Uso do plano (5 h e semana): `~/.claude/atlas/uso.json`, gravado pela status line do Claude (`~/.claude/statusline-uso.sh`, linha marcada com `# atlas-uso`).
+Os eventos das sessões ficam em `~/.claude/atlas/` (um arquivo por sessão, apagado quando a sessão fecha). As sessões abertas, com nome, título e cor, ficam em `~/Library/Application Support/Atlas/sessoes.json`.
 
-## Desligar os hooks
+## Salvar antes de fechar
 
-O instalador guarda uma cópia com a data (`.bak-atlas-AAAA-MM-DD`). Use a **mais antiga**, que é a de antes do Atlas (a primeira é de 2026-11-21):
+Ao fechar uma sessão, o Atlas pode digitar `/salvar` nela e esperar a resposta terminar. Se você ainda não tem um comando ou skill `/salvar`, o instalador põe uma versão genérica (`comandos/salvar.md`), que grava um resumo da conversa em `~/Documents/Atlas/Sessões/` (ou na pasta de notas que o seu CLAUDE.md indicar). Se você já tem o seu `/salvar`, ele é mantido como está.
 
-- Hooks: `cp ~/.claude/settings.json.bak-atlas-AAAA-MM-DD ~/.claude/settings.json` (ou apague no `settings.json` os itens com `atlas-estado.py`; a cópia `.bak-atlas-antes-guarda-*` é a de logo antes da troca do comando pelo que só roda dentro do Atlas).
-- Status line: `cp ~/.claude/statusline-uso.sh.bak-atlas-AAAA-MM-DD ~/.claude/statusline-uso.sh` (ou apague a linha com `# atlas-uso`).
+## Recursos opcionais
 
-Atenção: o `./atualizar.sh` reinstala os dois. Depois de desligar, não rode a atualização.
+Estes recursos dependem de peças que não vêm no repositório. Sem elas, o Atlas funciona normalmente e só esse recurso fica parado.
+
+- **Barras de uso do plano (5 h e semana).** O Atlas lê `~/.claude/atlas/uso.json`, gravado pela sua status line. O instalador só acrescenta a linha que grava esse arquivo se você tiver uma status line em `~/.claude/statusline-uso.sh` com a linha `input=$(cat)`. Para usar a de exemplo, copie `hook/statusline-exemplo.sh` para `~/.claude/statusline-uso.sh`, aponte o `statusLine` do seu `settings.json` para ela e rode `./atualizar.sh` de novo. Ela usa o [`jq`](https://jqlang.org/).
+- **Modo Jarvis.** A chave nas Configurações liga ou desliga a leitura em voz alta das respostas, criando ou apagando o arquivo `~/.claude/jarvis/ligado`. Quem efetivamente lê em voz alta é um hook seu que respeite esse arquivo; ele não vem no repositório.
+
+## Desinstalar
+
+1. Feche o Atlas e apague `/Applications/Atlas.app` e o atalho na Mesa.
+2. Hooks: restaure a cópia **mais antiga** de `~/.claude/settings.json.bak-atlas-*` (a de antes da primeira instalação) ou apague no `settings.json` os itens com `atlas-estado.py`.
+3. Status line: restaure `~/.claude/statusline-uso.sh.bak-atlas-*` ou apague a linha marcada com `# atlas-uso`.
+4. Se quiser, apague `~/.claude/hooks/atlas-estado.py`, `~/.claude/atlas/`, `~/Library/Application Support/Atlas/` e a identidade **Atlas Local** no app Acesso às Chaves.
+
+Depois de desinstalar, não rode `./atualizar.sh`: ele reinstala tudo.
+
+## Desenvolvimento
+
+- `npm start` abre o app sem instalar.
+- `npm test` roda os testes do app; `python3 -m unittest discover -s hook` roda os dos hooks.
+- `ATLAS_DEMO=1 npm start` abre um modo de demonstração com sessões falsas, sem rodar o Claude Code (ver o começo de `src/demo.js`).
+
+## Licença
+
+[MIT](LICENSE).
