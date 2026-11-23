@@ -1,6 +1,13 @@
-# Atlas
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="identidade/logos/svg/atlas-logo-horizontal-giz.svg">
+    <img src="identidade/logos/svg/atlas-logo-horizontal-grafite.svg" alt="Atlas" width="280">
+  </picture>
+</p>
 
 App de Mac que abre várias sessões do [Claude Code](https://claude.com/claude-code) lado a lado. Cada sessão ganha um cartão colorido que mostra o estado dela: trabalhando, pede aprovação, pronta, sem sinal ou encerrada. Os cartões podem ser organizados em grupos, e uma chamada curta ao Haiku sugere o grupo de cada sessão nova.
+
+![Atlas com sessões em grupos e o terminal da sessão selecionada](docs/atlas-tela.png)
 
 ## Requisitos
 
