@@ -11,7 +11,7 @@ App de Mac que abre várias sessões do [Claude Code](https://claude.com/claude-
 
 ## Requisitos
 
-- Mac com chip Apple (M1 ou mais novo). O app é gerado só para `arm64` e não roda no Windows nem no Linux.
+- Mac com chip Apple (M1 ou mais novo). O app é gerado só para `arm64` e não roda no Windows nem no Linux. Para adaptar ao Windows, veja [PORTAR-WINDOWS.md](PORTAR-WINDOWS.md).
 - [Claude Code](https://claude.com/claude-code) instalado e funcionando no Terminal (comando `claude`).
 - Node.js 20 ou mais novo e npm.
 - Python 3 (`python3`), usado pelos hooks.
