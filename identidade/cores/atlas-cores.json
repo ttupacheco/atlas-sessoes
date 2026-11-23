@@ -1,0 +1,9 @@
+{
+  "grafite": {"hex": "#171716", "rgb": [23, 23, 22], "uso": "Texto principal, logo, fundos escuros"},
+  "carvao":  {"hex": "#2E2D2B", "rgb": [46, 45, 43], "uso": "Superfícies no modo escuro, cards"},
+  "pedra":   {"hex": "#6B6964", "rgb": [107, 105, 100], "uso": "Texto secundário, ícones, legendas"},
+  "nevoa":   {"hex": "#B9B6AF", "rgb": [185, 182, 175], "uso": "Bordas fortes, estados desativados"},
+  "areia":   {"hex": "#E4E1DA", "rgb": [228, 225, 218], "uso": "Divisores, campos, fundos de apoio"},
+  "giz":     {"hex": "#F4F3F0", "rgb": [244, 243, 240], "uso": "Fundo principal da interface"},
+  "branco":  {"hex": "#FFFFFF", "rgb": [255, 255, 255], "uso": "Cards e superfícies elevadas"}
+}

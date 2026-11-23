@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Atlas</title>
+  <link rel="stylesheet" href="../../node_modules/@xterm/xterm/css/xterm.css">
+  <link rel="stylesheet" href="../../node_modules/@fontsource/inter/400.css">
+  <link rel="stylesheet" href="../../node_modules/@fontsource/inter/500.css">
+  <link rel="stylesheet" href="../../node_modules/@fontsource/inter/600.css">
+  <link rel="stylesheet" href="../../node_modules/@fontsource/space-grotesk/500.css">
+  <link rel="stylesheet" href="../../node_modules/@fontsource/jetbrains-mono/400.css">
+  <link rel="stylesheet" href="../../node_modules/@fontsource/jetbrains-mono/700.css">
+  <link rel="stylesheet" href="tela.css">
+</head>
+<body>
+  <aside class="lateral">
+    <div class="lateral__topo arrastar"></div>
+    <div class="marca arrastar"><img src="marca/atlas-logo-horizontal-giz.svg" alt="atlas"></div>
+    <div class="lateral__lista" id="cartoes" role="list" aria-label="Sessões"></div>
+    <div class="lateral__pe">
+      <div class="uso" id="uso" role="group" aria-label="Uso do plano"></div>
+      <div class="lateral__acoes">
+        <button class="botao-nova" id="botao-nova" type="button">
+          <span class="botao-nova__mais" aria-hidden="true">+</span> Nova sessão <kbd>⌘T</kbd>
+        </button>
+        <button class="botao-engrenagem" id="botao-engrenagem" type="button" title="Configurações  (⌘,)" aria-label="Configurações">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor"><circle cx="8" cy="8" r="5.9" stroke-width="2.2" stroke-dasharray="2.317 2.317"/><circle cx="8" cy="8" r="3.9" stroke-width="2"/></svg>
+        </button>
+        <button class="botao-engrenagem" id="botao-estatisticas" type="button" title="Estatísticas (⌘⇧E)" aria-label="Estatísticas (⌘⇧E)">
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3.5 13V9M8 13V3M12.5 13V6"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+  <main class="principal">
+    <header class="cabecalho arrastar" id="cabecalho">
+      <span class="cabecalho__cor" id="cab-cor"></span>
+      <span class="cabecalho__nome" id="cab-nome"></span>
+      <span class="cabecalho__pasta" id="cab-pasta"></span>
+    </header>
+    <div class="terminais" id="terminais">
+      <button class="botao-microfone" id="botao-microfone" type="button" title="Falar (⌘D): clique para gravar, clique de novo para enviar" aria-label="Falar (⌘D)" aria-pressed="false" hidden>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+      </button>
+    </div>
+    <div class="encerrada" id="encerrada" hidden>
+      <span id="encerrada-texto">Esta sessão foi encerrada.</span>
+      <button type="button" class="botao" id="botao-retomar">Retomar</button>
+      <button type="button" class="botao botao--secundario" id="botao-recomecar" hidden>Começar conversa nova</button>
+    </div>
+    <div class="vazio" id="vazio" hidden>
+      <p class="vazio__titulo">Nenhuma sessão aberta</p>
+      <p class="vazio__texto">Cada sessão abre na sua pasta pessoal, como uma aba nova do Terminal.</p>
+      <button type="button" class="botao" id="vazio-nova">Nova sessão <kbd>⌘T</kbd></button>
+    </div>
+    <section class="pagina" id="pagina" hidden aria-labelledby="pagina-titulo">
+      <header class="pagina__topo arrastar">
+        <button type="button" class="pagina__voltar" id="pagina-voltar"><span aria-hidden="true">‹</span> Voltar <kbd>esc</kbd></button>
+        <h1 class="pagina__titulo" id="pagina-titulo"></h1>
+      </header>
+      <div class="pagina__corpo" id="pagina-corpo" tabindex="-1"></div>
+    </section>
+  </main>
+  <script src="../../node_modules/@xterm/xterm/lib/xterm.js"></script>
+  <script src="../../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+  <script src="../../node_modules/@xterm/addon-webgl/lib/addon-webgl.js"></script>
+  <script src="../nome.js"></script>
+  <script src="util.js"></script>
+  <script src="tela.js"></script>
+</body>
+</html>

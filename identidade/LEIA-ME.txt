@@ -1,0 +1,25 @@
+ATLAS · IDENTIDADE VISUAL v1.0
+
+Atlas-Identidade-Visual.pdf
+  Guia com capa, logo e variações, cores, tipografia, aplicações e o símbolo Arco.
+
+logos/svg  (vetor, use sempre que possível)
+  atlas-logo-horizontal-*    Logo principal (símbolo + nome)
+  atlas-logo-vertical-*      Logo empilhado
+  atlas-simbolo-*            Só o símbolo Arco
+  atlas-logotipo-*           Só o nome "atlas"
+  atlas-icone-app-*          Ícone do app com cantos arredondados
+  atlas-icone-app-*-quadrado Ícone sem cantos, para App Store e Google Play (a loja aplica a máscara)
+  -grafite = para fundos claros  |  -giz = para fundos escuros
+
+logos/png  (fundo transparente, vários tamanhos em px)
+
+cores
+  atlas-cores.css   Variáveis CSS
+  atlas-cores.json  Hex, RGB e uso de cada cor
+
+Fontes (gratuitas, Google Fonts)
+  Títulos e logotipo: Space Grotesk Medium   https://fonts.google.com/specimen/Space+Grotesk
+  Interface:          Inter                  https://fonts.google.com/specimen/Inter
+  Dados e código:     JetBrains Mono         https://fonts.google.com/specimen/JetBrains+Mono
+  O logotipo nos arquivos já está convertido em curvas, não precisa da fonte instalada.

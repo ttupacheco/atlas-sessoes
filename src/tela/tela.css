@@ -1,0 +1,351 @@
+/* Atlas: identidade visual v1.0 (identidade/). Sete cinzas quentes, sem cor de destaque na moldura;
+   cor só onde informa: a faixa do projeto e a bolinha de estado. Hierarquia por contraste, peso e espaço.
+   Space Grotesk 500 nos títulos, Inter na interface, JetBrains Mono no terminal (fontes locais). */
+:root {
+  color-scheme: dark;
+  --grafite: #171716;
+  --carvao: #2e2d2b;
+  --pedra: #6b6964;
+  --nevoa: #b9b6af;
+  --areia: #e4e1da;
+  --giz: #f4f3f0;
+
+  /* Janela translúcida como o Clear Dark do Terminal: o macOS desfoca o que está atrás
+     (vibrancy, main.js) e o grafite vem por cima nesta opacidade. Cartões um pouco mais opacos. */
+  --opacidade-vidro: 78%;
+  --opacidade-cartao: 82%;
+  --fundo: color-mix(in srgb, var(--grafite) var(--opacidade-vidro), transparent); /* janela, coluna e terminal */
+  /* Degraus só como cor da paleta com opacidade sobre outra cor da paleta. */
+  --painel: color-mix(in srgb, color-mix(in srgb, var(--carvao) 60%, var(--grafite)) var(--opacidade-cartao), transparent); /* cartão */
+  --painel-alto: color-mix(in srgb, var(--carvao) 90%, transparent); /* cartão com o mouse, selecionado */
+  --linha: color-mix(in srgb, var(--carvao) 70%, var(--grafite));       /* divisor sutil */
+  --linha-forte: color-mix(in srgb, var(--pedra) 45%, var(--carvao));
+  --texto: var(--giz);
+  --suave: var(--nevoa);
+  --apagado: var(--nevoa);     /* terciário: névoa, legível no grafite e no carvão; hierarquia pelo tamanho */
+  --dica: var(--pedra);        /* só atalhos (⌘T), não essenciais */
+
+  /* Estados: tons contidos para o grafite; o vermelho é o que mais salta. */
+  --amarelo: #d6ab4f;
+  --verde: #74b27f;
+  --cinza: var(--nevoa);
+  --preto: var(--pedra);
+  --vermelho: #ec5a4f;
+  --vermelho-texto: #ff8a7f;
+  --vermelho-fundo: color-mix(in srgb, color-mix(in srgb, var(--vermelho) 16%, var(--grafite)) var(--opacidade-cartao), transparent);
+  --vermelho-fundo-alto: color-mix(in srgb, color-mix(in srgb, var(--vermelho) 22%, var(--grafite)) 90%, transparent);
+
+  --fonte-titulo: 'Space Grotesk', -apple-system, sans-serif;
+  --fonte-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --largura-lateral: 280px;
+  --altura-topo: 40px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; color: var(--texto); }
+html { background: transparent; }
+body { background: var(--fundo); } /* uma camada só: o alfa não se soma */
+body {
+  display: grid; grid-template-columns: var(--largura-lateral) minmax(0, 1fr);
+  font: 13px/1.4 var(--fonte-ui); -webkit-font-smoothing: antialiased;
+  user-select: none; cursor: default;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--nevoa); outline-offset: 2px; }
+kbd { font: 11px var(--fonte-ui); color: var(--dica); }
+.arrastar { -webkit-app-region: drag; }
+.arrastar button { -webkit-app-region: no-drag; }
+
+/* Coluna dos cartões */
+.lateral { position: relative; display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--linha); }
+.lateral__topo { height: var(--altura-topo); flex-shrink: 0; }
+.marca { flex-shrink: 0; padding: 6px 20px 16px; }
+.marca img { display: block; height: 18px; width: auto; }
+.lateral__lista { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 12px 12px; display: grid; grid-auto-rows: max-content; align-content: start; gap: 14px; }
+.lateral__pe { padding: 12px; border-top: 1px solid var(--linha); }
+
+.cartao {
+  position: relative; display: grid; gap: 3px; width: 100%; text-align: left;
+  padding: 10px 14px 11px 18px; border: 1px solid transparent; border-radius: 12px;
+  background: var(--painel); overflow: hidden;
+}
+.cartao::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--cor-projeto); }
+.cartao:hover { background: var(--painel-alto); }
+.cartao--selecionado, .cartao--selecionado:hover { background: var(--painel-alto); border-color: var(--pedra); }
+
+.cartao__topo { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.cartao__nome { flex: 1; min-width: 0; font: 500 15px/1.3 var(--fonte-titulo); letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Renomear no próprio cartão: o nome vira campo, na mesma fonte e no mesmo lugar. */
+.cartao__editar {
+  flex: 1; min-width: 0; margin: -2px 0 -2px -6px; padding: 1px 5px; font: 500 15px/1.3 var(--fonte-titulo); letter-spacing: -0.005em;
+  color: var(--texto); background: var(--grafite); border: 1px solid var(--nevoa); border-radius: 6px; outline: none;
+  user-select: text; cursor: text;
+}
+.cartao__editar::placeholder { color: var(--pedra); }
+.cartao__tempo { flex-shrink: 0; font-size: 12px; color: var(--apagado); font-variant-numeric: tabular-nums; }
+.cartao__estado { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13px; font-weight: 500; }
+.cartao__rotulo { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--suave); }
+/* "não salva" e "salvando": no começo da linha do pedido, em Pedra (não é cor de estado). */
+.cartao__salvar { color: var(--pedra); white-space: nowrap; }
+.cartao__pedido {
+  font-size: 12.5px; line-height: 1.4; color: var(--apagado);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+}
+
+.bolinha { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--cor-estado); }
+.cartao--amarelo { --cor-estado: var(--amarelo); }
+.cartao--verde { --cor-estado: var(--verde); }
+.cartao--cinza { --cor-estado: var(--cinza); }
+.cartao--vermelho { --cor-estado: var(--vermelho); }
+.cartao--preto .bolinha { background: transparent; box-shadow: inset 0 0 0 1.5px var(--preto); }
+.cartao--amarelo .cartao__rotulo { color: var(--texto); }
+.cartao--preto .cartao__nome { color: var(--suave); }
+
+/* Vermelho: precisa do usuário. Fundo, borda e rótulo em vermelho, o único ponto quente da tela. */
+.cartao--vermelho { background: var(--vermelho-fundo); border-color: color-mix(in srgb, var(--vermelho) 50%, transparent); }
+.cartao--vermelho:hover { background: var(--vermelho-fundo-alto); }
+.cartao--vermelho.cartao--selecionado { background: var(--vermelho-fundo-alto); border-color: var(--vermelho); }
+.cartao--vermelho .cartao__rotulo { color: var(--vermelho-texto); font-weight: 600; }
+.cartao--vermelho .cartao__pedido { color: var(--suave); }
+
+/* Blocos de grupo: título pequeno em névoa, sem caixa; clicar recolhe. Recolhido mostra quantas
+   sessões tem, ou quantas precisam do usuário (em vermelho, como o estado). */
+.bloco { display: grid; gap: 6px; }
+.bloco__cartoes { display: grid; gap: 8px; }
+.bloco__cartoes[hidden] { display: none; }
+.bloco--sem-titulo .bloco__titulo { display: none; }
+.bloco__titulo {
+  display: flex; align-items: center; gap: 7px; width: 100%; min-width: 0; padding: 3px 6px 1px 4px;
+  border: 0; border-radius: 6px; background: transparent; text-align: left;
+  font: 500 12px/1.4 var(--fonte-ui); letter-spacing: 0.01em; color: var(--suave);
+}
+.bloco__titulo:hover { color: var(--texto); }
+.bloco__titulo:hover .bloco__seta { border-color: var(--nevoa); }
+.bloco__seta {
+  flex-shrink: 0; width: 5px; height: 5px; margin: 0 2px 1px 3px;
+  border-right: 1.5px solid var(--pedra); border-bottom: 1.5px solid var(--pedra); transform: rotate(45deg);
+}
+.bloco--recolhido .bloco__seta { transform: rotate(-45deg); margin-bottom: 0; }
+.bloco__nome { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bloco__conta { margin-left: auto; flex-shrink: 0; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--pedra); font-variant-numeric: tabular-nums; }
+.bloco__conta:empty { display: none; }
+.bloco__conta--vermelho { color: var(--vermelho-texto); font-weight: 600; }
+.bloco__conta--vermelho::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--vermelho); }
+.bloco--recolhido:has(.bloco__conta--vermelho) .bloco__nome { color: var(--texto); }
+
+/* Uso do plano: duas linhas (5 h e semana) com barra fina, como na status line. */
+.uso { display: grid; gap: 9px; padding: 2px 2px 14px; }
+.uso__linha { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; column-gap: 8px; row-gap: 5px; }
+.uso__rotulo { font-size: 12px; font-weight: 500; color: var(--suave); }
+.uso__reset { min-width: 0; text-align: right; font-size: 11.5px; color: var(--apagado); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.uso__pct { min-width: 30px; text-align: right; font-size: 12px; font-weight: 500; color: var(--texto); font-variant-numeric: tabular-nums; }
+.uso__barra { grid-column: 1 / -1; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--pedra) 40%, transparent); overflow: hidden; }
+.uso__cheio { display: block; height: 100%; border-radius: 2px; background: var(--nevoa); }
+.uso__linha--atencao .uso__cheio { background: var(--amarelo); }
+.uso__linha--alerta .uso__cheio { background: var(--vermelho); }
+.uso__linha--alerta .uso__pct { color: var(--vermelho-texto); }
+.uso__linha--vazia { opacity: 0.5; }
+
+.lateral__acoes { display: flex; gap: 8px; }
+.botao-engrenagem {
+  flex-shrink: 0; display: grid; place-items: center; width: 38px; padding: 0;
+  border: 1px solid var(--linha-forte); border-radius: 10px; background: transparent; color: var(--pedra);
+}
+.botao-engrenagem:hover { background: var(--carvao); color: var(--texto); }
+.botao-engrenagem--ativo, .botao-engrenagem--ativo:hover { background: var(--carvao); color: var(--texto); border-color: var(--pedra); }
+.botao-nova {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 14px;
+  border: 1px solid var(--linha-forte); border-radius: 10px; background: transparent; color: var(--suave); font-weight: 500;
+}
+.botao-nova:hover { background: var(--carvao); color: var(--texto); }
+.botao-nova__mais { font-size: 16px; line-height: 1; font-weight: 400; }
+.botao-nova kbd { margin-left: auto; }
+
+/* Lado direito: cabeçalho da sessão e o terminal */
+.principal { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.cabecalho {
+  height: var(--altura-topo); flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+  padding: 0 18px; border-bottom: 1px solid var(--linha); white-space: nowrap; overflow: hidden;
+}
+.cabecalho__cor { width: 4px; height: 16px; border-radius: 2px; background: var(--cor-projeto, transparent); flex-shrink: 0; }
+.cabecalho__nome { font: 500 14px var(--fonte-titulo); }
+.cabecalho__pasta { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--apagado); font-size: 12px; }
+
+.terminais { position: relative; flex: 1; min-height: 0; }
+/* Todos os terminais ficam com tamanho (só invisíveis), para medir e redimensionar certo.
+   Não usar a classe "terminal": o xterm já usa esse nome no próprio elemento. */
+.tela-terminal { position: absolute; top: 10px; left: 16px; right: 6px; bottom: 6px; visibility: hidden; }
+.tela-terminal--ativo { visibility: visible; }
+/* Microfone no canto do terminal, como o do campo de texto do Claude. */
+.botao-microfone {
+  position: absolute; right: 22px; bottom: 16px; z-index: 5; display: grid; place-items: center;
+  width: 40px; height: 40px; padding: 0; border: 1px solid var(--linha-forte); border-radius: 50%;
+  background: var(--painel-alto); color: var(--nevoa); cursor: pointer;
+}
+.botao-microfone[hidden] { display: none; }
+.botao-microfone:hover { color: var(--texto); border-color: var(--pedra); }
+.botao-microfone:disabled { opacity: .5; cursor: default; }
+.botao-microfone--gravando, .botao-microfone--gravando:hover {
+  background: var(--vermelho); border-color: var(--vermelho); color: var(--giz);
+  animation: microfone-pulso 1.4s ease-in-out infinite;
+}
+@keyframes microfone-pulso {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--vermelho) 45%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--vermelho) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .botao-microfone--gravando { animation: none; } }
+.terminais--soltar { outline: 1px dashed var(--nevoa); outline-offset: -6px; }
+/* O xterm.css pinta o viewport de preto; aqui fica transparente para aparecer o vidro. */
+.xterm .xterm-viewport { background-color: transparent; scrollbar-width: thin; scrollbar-color: var(--linha-forte) transparent; }
+
+.encerrada {
+  display: flex; align-items: center; gap: 14px; padding: 10px 18px; border-top: 1px solid var(--linha);
+  background: var(--painel); color: var(--suave);
+}
+.encerrada[hidden] { display: none; }
+/* Botão primário da marca, invertido para o modo escuro: giz com texto grafite. */
+.botao {
+  padding: 6px 16px; border: 0; border-radius: 8px; background: var(--giz); color: var(--grafite); font-weight: 500;
+}
+.botao:hover { background: var(--areia); }
+.botao[hidden] { display: none; }
+.botao--secundario { background: transparent; color: var(--giz); box-shadow: inset 0 0 0 1px var(--linha-forte); }
+.botao--secundario:hover { background: var(--painel-alto); }
+.botao kbd { margin-left: 6px; color: var(--pedra); }
+
+.vazio { position: absolute; inset: var(--altura-topo) 0 0; display: grid; place-content: center; justify-items: center; gap: 6px; text-align: center; }
+.vazio[hidden] { display: none; }
+.vazio p { margin: 0; }
+.vazio__titulo { font: 500 20px/1.3 var(--fonte-titulo); }
+.vazio__texto { color: var(--suave); margin-bottom: 12px !important; }
+
+/* Páginas (Configurações, Estatísticas): no lugar do terminal, no mesmo vidro da janela. */
+.principal--pagina > :not(.pagina) { visibility: hidden; }
+/* O terminal ativo tem visibility: visible própria; com a página ele some também. */
+.principal--pagina .tela-terminal { visibility: hidden; }
+.pagina { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; }
+.pagina[hidden] { display: none; }
+.pagina__topo {
+  height: var(--altura-topo); flex-shrink: 0; display: flex; align-items: center; gap: 14px;
+  padding: 0 18px 0 10px; border-bottom: 1px solid var(--linha);
+}
+.pagina__voltar {
+  display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--suave); font-size: 13px; font-weight: 500;
+}
+.pagina__voltar span { font-size: 17px; line-height: 1; margin-top: -2px; }
+.pagina__voltar:hover { background: var(--carvao); color: var(--texto); }
+.pagina__voltar kbd { margin-left: 2px; }
+.pagina__titulo { margin: 0; font: 500 14px var(--fonte-titulo); }
+.pagina__corpo:focus { outline: none; }
+.pagina__corpo { flex: 1; min-height: 0; overflow-y: auto; padding: 28px 32px 48px; scrollbar-width: thin; scrollbar-color: var(--linha-forte) transparent; }
+.pagina__corpo > * { max-width: 680px; }
+
+.secao { margin: 0 0 36px; }
+.secao__titulo { margin: 0 0 4px; font: 500 16px/1.3 var(--fonte-titulo); letter-spacing: -0.005em; }
+.secao__texto { margin: 0 0 14px; color: var(--suave); font-size: 12.5px; }
+.secao__titulo + :not(.secao__texto) { margin-top: 12px; }
+
+/* Atalhos: tabela de leitura, teclas à esquerda em coluna fixa. */
+.atalhos { width: 100%; border-collapse: collapse; }
+.atalhos tbody + tbody .atalhos__grupo th { padding-top: 18px; }
+.atalhos__grupo th { padding: 0 0 6px; text-align: left; font-size: 11.5px; font-weight: 500; color: var(--apagado); }
+.atalhos td { padding: 6px 0; border-top: 1px solid var(--linha); vertical-align: baseline; }
+.atalhos__teclas { width: 150px; padding-right: 16px !important; white-space: nowrap; color: var(--pedra); font-size: 12px; }
+.atalhos__acao { color: var(--texto); }
+.tecla {
+  display: inline-block; min-width: 22px; padding: 1px 6px; border: 1px solid var(--linha-forte); border-radius: 5px;
+  font: 500 12px/1.45 var(--fonte-ui); color: var(--areia); text-align: center;
+}
+
+/* Grupos: nome, descrição e apagar numa linha; campos parecem texto até o mouse ou o foco. */
+.grupos__cabecalho, .grupo { display: grid; grid-template-columns: minmax(110px, 170px) minmax(0, 1fr) 84px; column-gap: 10px; align-items: center; }
+.grupos__cabecalho { padding: 0 0 6px; font-size: 11.5px; font-weight: 500; color: var(--apagado); }
+.grupos__cabecalho > span:first-child { padding-left: 8px; }
+.grupos__cabecalho > span:nth-child(2) { padding-left: 8px; }
+.grupos__ajuda { grid-column: 2 / -1; padding-left: 8px; font-weight: 400; color: var(--pedra); }
+.grupos { list-style: none; margin: 0; padding: 0; }
+.grupo { padding: 3px 0; border-top: 1px solid var(--linha); }
+.grupos__vazio { padding: 10px 8px; border-top: 1px solid var(--linha); color: var(--suave); }
+.campo {
+  width: 100%; min-width: 0; padding: 5px 7px; border: 1px solid transparent; border-radius: 6px; outline: none;
+  background: transparent; color: var(--texto); font: 13px/1.4 var(--fonte-ui); user-select: text; cursor: text;
+}
+.campo:hover { border-color: var(--linha-forte); }
+.campo:focus { border-color: var(--nevoa); background: var(--grafite); }
+.campo::placeholder { color: var(--pedra); }
+.campo--erro, .campo--erro:hover { border-color: var(--vermelho); }
+.grupo__nome { font: 500 14px/1.4 var(--fonte-titulo); }
+.grupo__descricao { color: var(--suave); font-size: 12.5px; }
+.grupo__descricao:focus { color: var(--texto); }
+.grupo__apagar {
+  justify-self: end; padding: 4px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--pedra); font-size: 12.5px;
+}
+.grupo__apagar:hover { background: var(--carvao); color: var(--texto); }
+.grupo__apagar--confirmar, .grupo__apagar--confirmar:hover { background: var(--giz); color: var(--grafite); font-weight: 500; }
+.grupo__erro { grid-column: 1 / -1; margin: 0; padding: 0 8px; font-size: 12px; color: var(--vermelho-texto); }
+.grupo__erro:empty { display: none; }
+.grupo__erro:not(:empty) { padding-bottom: 4px; }
+.grupo--novo { border-top: 1px solid var(--linha); padding-top: 8px; }
+.grupo--novo .grupo__nome { border-color: var(--linha-forte); }
+.grupo--novo .grupo__nome:focus { border-color: var(--nevoa); }
+.grupo--novo .botao { justify-self: start; }
+.botao--pequeno { padding: 5px 14px; }
+
+/* Tamanho do texto: A−  13  A+  e o link Padrão */
+.tamanho { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.tamanho__passo {
+  min-width: 34px; padding: 4px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--giz);
+  box-shadow: inset 0 0 0 1px var(--linha-forte); font: 500 12.5px/1.2 var(--fonte-ui);
+}
+.tamanho__passo:hover:not(:disabled) { background: var(--painel-alto); }
+.tamanho__passo:disabled { color: var(--pedra); box-shadow: inset 0 0 0 1px var(--linha); }
+.tamanho__valor { min-width: 26px; text-align: center; font-variant-numeric: tabular-nums; }
+.tamanho__padrao { margin-left: 10px; padding: 0; border: 0; background: none; color: var(--suave); font: inherit; font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px; }
+.tamanho__padrao:hover { color: var(--texto); }
+
+/* Opção liga/desliga */
+.opcao { display: flex; align-items: flex-start; gap: 24px; padding: 12px 0; border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); }
+.opcao__textos { flex: 1; display: grid; gap: 3px; }
+.opcao__rotulo { font-weight: 500; }
+.opcao__texto { color: var(--suave); font-size: 12.5px; }
+.chave {
+  position: relative; flex-shrink: 0; width: 34px; height: 20px; margin-top: 1px; padding: 0; border: 0; border-radius: 10px;
+  background: var(--carvao); box-shadow: inset 0 0 0 1px var(--linha-forte); transition: background-color 0.15s;
+}
+.chave::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--pedra); transition: transform 0.15s, background-color 0.15s;
+}
+.chave[aria-checked="true"] { background: var(--giz); box-shadow: none; }
+.chave[aria-checked="true"]::after { transform: translateX(14px); background: var(--grafite); }
+.secao > .grupo__erro { padding: 6px 0 0; }
+
+/* Estatísticas */
+.resumo { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 0 0 32px; flex-wrap: wrap; }
+.resumo__numero { display: grid; gap: 2px; }
+.resumo__total { font: 500 40px/1.05 var(--fonte-titulo); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.resumo__rotulo { color: var(--suave); font-size: 12.5px; }
+.segmentos { display: inline-flex; padding: 2px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--linha-forte); }
+.segmentos__item { padding: 4px 12px; border: 0; border-radius: 6px; background: transparent; color: var(--suave); font-size: 12.5px; font-weight: 500; }
+.segmentos__item:hover { color: var(--texto); }
+.segmentos__item[aria-checked="true"] { background: var(--carvao); color: var(--texto); }
+
+.barras { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.barras__linha { display: grid; grid-template-columns: minmax(90px, 150px) minmax(0, 1fr) 60px; align-items: center; column-gap: 14px; padding: 7px 0; border-top: 1px solid var(--linha); }
+.barras__nome { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barras__trilho { height: 8px; border-radius: 2px; background: color-mix(in srgb, var(--carvao) 70%, transparent); overflow: hidden; }
+.barras__cheio { display: block; height: 100%; border-radius: 2px; background: var(--nevoa); }
+.barras__linha:first-child .barras__cheio { background: var(--giz); }
+.barras__valor { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.ranking { list-style: none; margin: 0; padding: 0; }
+.ranking__linha { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: baseline; column-gap: 10px; padding: 8px 0; border-top: 1px solid var(--linha); }
+.ranking__pos { color: var(--pedra); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ranking__nomes { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.ranking__nome { min-width: 0; font: 500 14px/1.35 var(--fonte-titulo); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ranking__grupo { flex-shrink: 0; font-size: 12px; color: var(--apagado); }
+.ranking__valor { font-weight: 500; font-variant-numeric: tabular-nums; }
+
+.estat-vazio { margin: 0; padding: 18px 0; border-top: 1px solid var(--linha); color: var(--suave); }

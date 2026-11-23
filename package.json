@@ -1,0 +1,64 @@
+{
+  "name": "atlas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@fontsource/inter": "5.3.0",
+    "@fontsource/jetbrains-mono": "5.3.0",
+    "@fontsource/space-grotesk": "5.3.0",
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/addon-webgl": "0.19.0",
+    "@xterm/xterm": "6.0.0",
+    "node-pty": "1.1.0"
+  },
+  "devDependencies": {
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0"
+  },
+  "main": "src/main.js",
+  "build": {
+    "appId": "com.atlas.sessoes",
+    "productName": "Atlas",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!node_modules/node-pty/{deps,src,third_party,scripts,node-addon-api,typings}/**",
+      "!node_modules/node-pty/prebuilds/{win32-x64,win32-arm64,darwin-x64}/**",
+      "!node_modules/node-pty/build/Release/obj.target/**",
+      "!node_modules/node-pty/build/Release/node-addon-api/**"
+    ],
+    "asarUnpack": [
+      "node_modules/node-pty/**/*"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.developer-tools",
+      "icon": "build/icon.icns",
+      "identity": "Atlas Local",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "notarize": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "O Atlas usa o microfone quando uma sessão do Claude pede para ouvir você (ditado por voz).",
+        "NSAppleEventsUsageDescription": "O Atlas controla outros apps quando uma sessão do Claude pede (por exemplo, abrir o Finder ou falar com o Terminal)."
+      }
+    }
+  }
+}
