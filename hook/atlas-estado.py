@@ -26,6 +26,8 @@ TIPOS = {
 }
 
 
+TIPOS_FUNDO = {'shell', 'subagent', 'workflow', 'teammate'}
+
 CASCAS = {'sh', 'bash', 'zsh', 'dash', 'ksh'}
 
 
@@ -63,6 +65,13 @@ def montar(dados):
         ev['agente'] = dados['agent_id']
     if nome == 'PostToolUseFailure':
         ev['falhou'] = True
+    # O Stop traz o trabalho em segundo plano ainda em andamento: com ele o Atlas sabe que a
+    # sessão está esperando, não pronta. Só os tipos que acordam o claude quando acabam; monitor,
+    # dream, auto-mode scan e afins ficam de fora.
+    if tipo == 'stop' and isinstance(dados.get('background_tasks'), list):
+        ev['fundo'] = [t['type'] for t in dados['background_tasks']
+                       if isinstance(t, dict) and isinstance(t.get('type'), str)
+                       and t['type'] in TIPOS_FUNDO][:50]
     if tipo == 'falha_stop' and dados.get('error'):
         ev['erro'] = str(dados['error'])[:LIMITE_TEXTO]
     if tipo == 'notificacao':

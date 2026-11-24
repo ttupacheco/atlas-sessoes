@@ -350,3 +350,66 @@ test('falha_stop encerra a vez: sai do amarelo na hora e limpa as pendências da
     { t: 11, tipo: 'permissao', ferramenta: 'Bash' }, { t: 20, tipo: 'falha_stop' }];
   assert.strictEqual(calcularEstado(comAprovacao, ctx({ agora: 30 })).cor, 'verde');
 });
+
+test('stop com trabalho em segundo plano: amarelo, e verde no stop seguinte sem fundo', () => {
+  const ev = [{ t: 0, tipo: 'prompt' }, { t: 20, tipo: 'stop', fundo: ['subagent', 'shell'] }];
+  const e = calcularEstado(ev, ctx({ agora: 30 }));
+  assert.strictEqual(e.cor, 'amarelo');
+  assert.strictEqual(e.rotulo, 'trabalhando em segundo plano');
+  const volta = [...ev, { t: 40, tipo: 'prompt', texto: '<task-notification>' }, { t: 50, tipo: 'stop', fundo: [] }];
+  assert.strictEqual(calcularEstado(volta, ctx({ agora: 60 })).cor, 'verde');
+  assert.strictEqual(calcularEstado([{ t: 0, tipo: 'prompt' }, { t: 20, tipo: 'stop' }], ctx({ agora: 30 })).cor, 'verde', 'stop antigo sem a lista');
+});
+
+test('subagente usando ferramenta depois do stop não vira "sem sinal" nem tira o segundo plano', () => {
+  const ev = [{ t: 0, tipo: 'prompt' }, { t: 20, tipo: 'stop', fundo: ['subagent'] },
+    { t: 30, tipo: 'pre_tool', ferramenta: 'Bash', tool_use_id: 'b', agente: 'bg' }];
+  const e = calcularEstado(ev, ctx({ agora: 30 + 5 * 60000 }));
+  assert.strictEqual(e.rotulo, 'trabalhando em segundo plano');
+});
+
+test('segundo plano calado por mais de 60 min volta ao fluxo normal', () => {
+  const ev = [{ t: 0, tipo: 'prompt' }, { t: 20, tipo: 'stop', fundo: ['subagent'] }];
+  const depois = 61 * 60000;
+  assert.strictEqual(calcularEstado(ev, ctx({ agora: depois, vistaEm: depois })).cor, 'verde');
+  const comSinal = [...ev, { t: 50 * 60000, tipo: 'post_tool', ferramenta: 'Read', agente: 'bg' }];
+  assert.strictEqual(calcularEstado(comSinal, ctx({ agora: depois })).cor, 'amarelo', 'subagente com sinal recente segura');
+});
+
+test('falha de subagente não encerra a vez da conversa principal', () => {
+  const ev = [{ t: 0, tipo: 'prompt' }, { t: 10, tipo: 'pre_tool', ferramenta: 'Agent', tool_use_id: 'a' },
+    { t: 20, tipo: 'falha_stop', agente: 'sub' }];
+  assert.strictEqual(calcularEstado(ev, ctx({ agora: 30 })).rotulo, 'trabalhando');
+});
+
+test('aprovação pendente ganha do segundo plano', () => {
+  const ev = [{ t: 0, tipo: 'prompt' }, { t: 5, tipo: 'pre_tool', ferramenta: 'Bash', tool_use_id: 'b', agente: 'bg' },
+    { t: 6, tipo: 'permissao', ferramenta: 'Bash', agente: 'bg' }, { t: 20, tipo: 'stop', fundo: ['subagent'] }];
+  assert.strictEqual(calcularEstado(ev, ctx({ agora: 30 })).cor, 'vermelho');
+});
+
+test('só shell em segundo plano: teto de 10 min', () => {
+  const ev = [{ t: 0, tipo: 'prompt' }, { t: 20, tipo: 'stop', fundo: ['shell'] }];
+  assert.strictEqual(calcularEstado(ev, ctx({ agora: 9 * 60000 })).cor, 'amarelo');
+  assert.strictEqual(calcularEstado(ev, ctx({ agora: 11 * 60000, vistaEm: 11 * 60000 })).cor, 'verde');
+  const comAgente = [{ t: 0, tipo: 'prompt' }, { t: 20, tipo: 'stop', fundo: ['shell', 'subagent'] }];
+  assert.strictEqual(calcularEstado(comAgente, ctx({ agora: 30 * 60000 })).cor, 'amarelo');
+});
+
+test('tipos que não acordam o claude não seguram o amarelo', () => {
+  const ev = [{ t: 0, tipo: 'prompt' }, { t: 20, tipo: 'stop', fundo: ['dream', 'monitor'] }];
+  assert.strictEqual(calcularEstado(ev, ctx({ agora: 30 })).cor, 'verde');
+});
+
+test('sem a lista, subagente com sinal recente é segundo plano', () => {
+  const ev = [{ t: 0, tipo: 'prompt' }, { t: 20, tipo: 'notificacao', notificacao: 'idle_prompt' },
+    { t: 30, tipo: 'pre_tool', ferramenta: 'Read', agente: 'bg' }];
+  assert.strictEqual(calcularEstado(ev, ctx({ agora: 60 })).rotulo, 'trabalhando em segundo plano');
+  assert.strictEqual(calcularEstado(ev, ctx({ agora: 200000, vistaEm: 200000 })).cor, 'verde');
+});
+
+test('aviso do claude não vira o pedido do cartão', () => {
+  const ev = [{ t: 0, tipo: 'prompt', texto: 'conferir notas' }, { t: 10, tipo: 'stop', fundo: ['subagent'] },
+    { t: 20, tipo: 'prompt', texto: '<task-notification>\n<task-id>x</task-id>' }];
+  assert.strictEqual(calcularEstado(ev, ctx({ agora: 30 })).ultimoPedido, 'conferir notas');
+});

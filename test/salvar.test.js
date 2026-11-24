@@ -167,3 +167,10 @@ test('textoRascunhos: singular e plural', () => {
   assert.equal(dialogoSair(2, 1).detail, textoRascunhos(1));
   assert.equal(dialogoSair(2, 0).detail, undefined);
 });
+
+test('aviso de tarefa em segundo plano no meio do /salvar não cancela', () => {
+  const ev = [{ t: 1, tipo: 'prompt', texto: '/salvar' },
+    { t: 2, tipo: 'prompt', texto: '<task-notification>\n<task-id>b1</task-id>' },
+    { t: 3, tipo: 'prompt', texto: '<agent-message from="x">oi' }, { t: 4, tipo: 'stop' }];
+  assert.equal(estaSalva(ev), true);
+});

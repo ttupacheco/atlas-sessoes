@@ -64,6 +64,19 @@ class HookTest(unittest.TestCase):
         self.assertEqual(ev[0]['erro'], 'rate_limit')
         self.assertEqual(ev[0]['session_id'], 'abc')
 
+    def test_stop_grava_segundo_plano_sem_monitor(self):
+        rodar({'hook_event_name': 'Stop', 'background_tasks': [
+            {'id': 'b1', 'type': 'shell', 'status': 'running', 'description': 'x', 'command': 'sleep 99'},
+            {'id': 'a1', 'type': 'subagent', 'status': 'running', 'description': 'y'},
+            {'id': 'm1', 'type': 'monitor', 'status': 'running', 'description': 'z'},
+            {'id': 'd1', 'type': 'dream', 'status': 'running', 'description': 'w'}]}, self.pasta)
+        rodar({'hook_event_name': 'Stop', 'background_tasks': []}, self.pasta)
+        rodar({'hook_event_name': 'Stop'}, self.pasta)
+        ev = linhas(self.pasta)
+        self.assertEqual(ev[0]['fundo'], ['shell', 'subagent'])
+        self.assertEqual(ev[1]['fundo'], [])
+        self.assertNotIn('fundo', ev[2])
+
     def test_notificacao_tipo(self):
         rodar({'hook_event_name': 'Notification', 'notification_type': 'permission_prompt',
                'session_id': 'abc'}, self.pasta)

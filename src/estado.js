@@ -4,6 +4,24 @@ const LIMITE_PEDIDO = 80;
 // Sem nenhum evento desta execução, o claude ainda não rodou hook nenhum. Na pasta pessoal
 // isso é o diálogo de confiança, que aparece em toda abertura e só passa com um Enter.
 const SEGUNDOS_ABRINDO = 10;
+// Trabalho em segundo plano (lista "fundo" do stop) segura o amarelo até a vez seguinte do
+// claude. Shell que não termina (servidor, watch) não pode prender o cartão: depois disto sem
+// nenhum sinal de subagente, o cartão volta ao fluxo normal de "pronta".
+const MINUTOS_FUNDO = 60;
+// Só shell em segundo plano (pode ser um servidor que nunca termina, e shell não dá sinal de
+// vida): teto menor.
+const MINUTOS_FUNDO_SHELL = 10;
+// Tipos de trabalho em segundo plano que acordam o claude quando acabam. Os demais (monitor,
+// dream, auto-mode scan, MCP task...) não seguram o amarelo.
+const TIPOS_FUNDO = new Set(['shell', 'subagent', 'workflow', 'teammate']);
+const fundoDe = (ev) => (Array.isArray(ev.fundo) ? ev.fundo.filter((t) => TIPOS_FUNDO.has(t)) : null);
+// O stop deixou trabalho em segundo plano que vai acordar o claude.
+const deixaFundo = (ev) => ehStop(ev) && ev.agente == null && (fundoDe(ev) || []).length > 0;
+
+// Pedido que o próprio claude escreve quando uma tarefa em segundo plano acaba ou chega
+// mensagem de outro agente: não é do usuário (não cancela o /salvar nem vira o pedido do cartão).
+const SINTETICO = /^\s*<(task-notification|agent-message|cross-session-message|teammate-message|artifact-room-event)\b/;
+const ehSintetico = (texto) => typeof texto === 'string' && SINTETICO.test(texto);
 
 function lerEventos(texto) {
   const eventos = [];
@@ -52,6 +70,8 @@ function ehRelevante(ev) {
   return ['prompt', 'pre_tool', 'post_tool', 'permissao', 'stop', 'falha_stop'].includes(ev.tipo);
 }
 
+const ROTULO_FUNDO = 'trabalhando em segundo plano';
+
 const ROTULO_PENDENCIA = { aprovacao: 'pede aprovação', pergunta: 'te fez uma pergunta' };
 
 const agenteDe = (ev) => (ev.agente == null ? null : ev.agente);
@@ -85,7 +105,9 @@ function acompanharPendencias() {
       return;
     }
     if (ehStop(ev)) {
-      pendencias = pendencias.filter((p) => p.agente !== null);
+      // Stop ou falha de um subagente só fecha as pendências dele.
+      if (ev.agente != null) pendencias = pendencias.filter((p) => p.agente !== ev.agente);
+      else pendencias = pendencias.filter((p) => p.agente !== null);
       return;
     }
     if (ev.tipo === 'pre_tool') {
@@ -169,20 +191,30 @@ function calcularEstado(eventos, ctx) {
   let ultimoTrabalho = -Infinity; // último evento antes da sequência final
   let trabalhoAntesDoFim = -Infinity;
   const pend = acompanharPendencias();
+  let fundo = null; // trabalho em segundo plano do último stop principal da sequência final
+  let sinalFundo = -Infinity; // último evento de subagente depois do fim da vez
   const responderAte = (t) => {
     for (; proxima < respostas.length && respostas[proxima] < t; proxima++) {
       if (pend.aoResposta(respostas[proxima])) respondidaEm = respostas[proxima];
     }
   };
   for (const ev of eventos) {
-    if (ev.tipo === 'prompt' && ev.texto != null) ultimoPedido = cortar(ev.texto);
+    if (ev.tipo === 'prompt' && ev.texto != null && !ehSintetico(ev.texto)) ultimoPedido = cortar(ev.texto);
     if (ev.session_id) claudeSessionId = ev.session_id;
     if (!ehRelevante(ev)) continue;
     responderAte(ev.t);
     pend.aoEvento(ev);
+    // Evento de subagente não abre nem fecha a vez da conversa principal: um subagente em
+    // segundo plano usa ferramentas depois do stop, e o stop ou a falha dele não é o fim da vez
+    // principal. Ele só alimenta as pendências (acima) e o sinal de vida.
+    if (ev.agente != null) {
+      if (fimDaVez) sinalFundo = ev.t;
+      else { ultimo = ev; ultimoTrabalho = ev.t; }
+      continue;
+    }
     if (encerraVez(ev)) {
-      if (!fimDaVez) { fimDaVez = ev; houveVez = antes; temStop = false; trabalhoAntesDoFim = ultimoTrabalho; }
-      if (ehStop(ev)) { houveVez = true; temStop = true; }
+      if (!fimDaVez) { fimDaVez = ev; houveVez = antes; temStop = false; trabalhoAntesDoFim = ultimoTrabalho; fundo = null; sinalFundo = -Infinity; }
+      if (ehStop(ev)) { houveVez = true; temStop = true; fundo = fundoDe(ev); }
     } else {
       fimDaVez = null;
       antes = true;
@@ -212,6 +244,15 @@ function calcularEstado(eventos, ctx) {
   }
 
   if (fimDaVez) {
+    // A conversa principal parou, mas o claude disse no stop que há trabalho em segundo plano
+    // (shell, subagente, workflow): ele volta sozinho quando acabar, então não está pronta.
+    // Sem a lista (Esc, só idle_prompt, hook antigo), um subagente que deu sinal há pouco
+    // também é trabalho em segundo plano.
+    const calado = agora - Math.max(fimDaVez.t, sinalFundo);
+    const teto = fundo && fundo.length && fundo.every((t) => t === 'shell') ? MINUTOS_FUNDO_SHELL : MINUTOS_FUNDO;
+    if ((fundo && fundo.length && calado < teto * 60000) || agora - sinalFundo < SEGUNDOS_SEM_SINAL * 1000) {
+      return { cor: 'amarelo', rotulo: ROTULO_FUNDO, desde: fimDaVez.t, ...base };
+    }
     const limite = fimDaVez.t + MINUTOS_NAO_VISTA * 60000;
     // Sem stop, a vez acabou por Esc, recusa ou erro, e o idle_prompt chega 60 s depois. Se
     // o usuário digitou na sessão depois do último trabalho, foi ele quem parou: já viu.
@@ -239,4 +280,4 @@ function ordenar(cartoes) {
   return [...vermelhos, ...resto];
 }
 
-module.exports = { lerEventos, calcularEstado, ordenar, encerraVez, ehStop, ehRelevante, acompanharPendencias, MINUTOS_NAO_VISTA, SEGUNDOS_SEM_SINAL, SEGUNDOS_ABRINDO };
+module.exports = { lerEventos, calcularEstado, ordenar, encerraVez, ehStop, ehRelevante, acompanharPendencias, MINUTOS_NAO_VISTA, SEGUNDOS_SEM_SINAL, SEGUNDOS_ABRINDO, MINUTOS_FUNDO, MINUTOS_FUNDO_SHELL, ROTULO_FUNDO, ehSintetico, deixaFundo };

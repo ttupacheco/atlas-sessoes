@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const { lerEventos, calcularEstado, ordenar, encerraVez, ehRelevante } = require('./estado.js');
+const { lerEventos, calcularEstado, ordenar, encerraVez, ehRelevante, ROTULO_FUNDO, ehSintetico, deixaFundo } = require('./estado.js');
 const { novaSessao, comandoClaude, idValido, salvarLista, carregarLista, gerarId } = require('./sessoes.js');
 const { PALETA } = require('./projetos.js');
 const { limparTitulo, nomeDoCartao } = require('./nome.js');
@@ -155,7 +155,8 @@ function criarGerente(opcoes) {
       // A vez do /salvar acabou sem stop (Esc, recusa, erro da API): o registro não terminou.
       // O cartão avisa até o próximo pedido, e a espera do Atlas por ele para (conferirSalvar).
       if (destaExecucao && antes === 'salvando' && r.fase === 'pedido' && ev.tipo !== 'prompt') r.falhaSalvar = true;
-      if (ev.tipo === 'prompt') {
+      // Aviso do claude (tarefa acabou, mensagem de agente) não é pedido do usuário.
+      if (ev.tipo === 'prompt' && !ehSintetico(ev.texto)) {
         if (destaExecucao) r.falhaSalvar = false;
         // Fala enviada pela voz (escrever, ESPACO_VOZ): o pedido chegou, a caixa esvaziou.
         if (destaExecucao && r.voz) {
@@ -340,9 +341,13 @@ function criarGerente(opcoes) {
   function vigiarFimDaVez(s, r, novos) {
     for (const ev of novos) {
       if (typeof ev.t !== 'number' || ev.t < r.iniciadoEm || !ehRelevante(ev)) continue;
+      // Subagente não abre nem fecha a vez da conversa principal (ver calcularEstado).
+      if (ev.agente != null) continue;
       if (encerraVez(ev)) {
         // A vez do /salvar de um cartão que vai fechar (ou do app que vai sair): sem "Terminou".
-        if (r.vezAberta && !(r.salvando && r.viuSalvar)) {
+        // Com trabalho em segundo plano também não: o claude volta sozinho e o stop dessa
+        // volta é que avisa.
+        if (r.vezAberta && !deixaFundo(ev) && !(r.salvando && r.viuSalvar)) {
           // Stop com um subagente ainda esperando: o cartão segue vermelho.
           const estado = estadoDe(s);
           const esperando = estado.cor === 'vermelho' && MOTIVO_PRECISA[estado.rotulo] !== undefined;
@@ -437,7 +442,7 @@ function criarGerente(opcoes) {
 
   function aoLerNovos(s, r, id, novos) {
     // A vez terminou com a sessão aberta na tela e o app na frente: conta como vista.
-    if (novos.some(encerraVez) && id === selecionada && naTela()) r.vistaEm = agora();
+    if (novos.some((ev) => encerraVez(ev) && ev.agente == null) && id === selecionada && naTela()) r.vistaEm = agora();
     // Conversa do claude: a do último evento que tem uma, para retomar mesmo sem stop.
     // Eventos de antes desta execução só servem se a lista não tem a conversa: a que foi salva
     // já passou pelo filtro de pid, e o arquivo pode terminar num claude aninhado.
@@ -516,7 +521,9 @@ function criarGerente(opcoes) {
   function podeDigitar(s, r) {
     if (!r.processoVivo || !r.pty) return false;
     const estado = estadoDe(s);
-    return estado.cor === 'verde' || (estado.cor === 'vermelho' && estado.rotulo === 'pronta, você ainda não viu');
+    // Com trabalho em segundo plano a caixa do claude aceita pedido (o /salvar também).
+    return estado.cor === 'verde' || estado.rotulo === ROTULO_FUNDO ||
+      (estado.cor === 'vermelho' && estado.rotulo === 'pronta, você ainda não viu');
   }
 
   // Escrita do Atlas, direto no pty: não passa pelo escrever(), então não conta como tecla

@@ -1,6 +1,6 @@
 // Sessão salva com o /salvar: o último pedido da conversa é /salvar e o Claude terminou esse
 // turno. Sem nenhum pedido não há o que salvar. Sem Electron aqui: o main e o gerente usam.
-const { encerraVez } = require('./estado.js');
+const { encerraVez, ehSintetico } = require('./estado.js');
 
 // /salvar com ou sem argumentos (o texto do evento é o começo do pedido).
 const ehSalvar = (texto) => typeof texto === 'string' && /^\/salvar(\s|$)/.test(texto.trimStart());
@@ -14,6 +14,8 @@ const ehSalvar = (texto) => typeof texto === 'string' && /^\/salvar(\s|$)/.test(
 // não encerra o turno da conversa principal.
 function passoSalvar(fase, ev) {
   if (!ev || typeof ev !== 'object') return fase;
+  // Aviso do claude (tarefa em segundo plano acabou, mensagem de agente) não é pedido novo.
+  if (ev.tipo === 'prompt' && ehSintetico(ev.texto)) return fase;
   if (ev.tipo === 'prompt') return ehSalvar(ev.texto) ? 'salvando' : 'pedido';
   if (fase === 'salvando' && encerraVez(ev) && ev.agente == null) return ev.tipo === 'stop' ? 'salva' : 'pedido';
   return fase;

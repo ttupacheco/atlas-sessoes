@@ -46,7 +46,7 @@ function pedacosDoTurno(eventos, { processoSaiuEm = null, cinzaDesde = null } = 
     if (esperando && (trabalho || ehStop(ev)) && ev.agente == null) pend.soltarAvisos();
     const vermelho = pend.abertas().length > 0;
 
-    if (encerraVez(ev)) {
+    if (encerraVez(ev) && ev.agente == null) {
       fechar(ehStop(ev) || ultimoTrabalho == null ? ev.t : ultimoTrabalho);
       esperando = vermelho; // stop com um subagente ainda esperando
       continue;
