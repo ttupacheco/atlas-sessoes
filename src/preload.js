@@ -8,8 +8,6 @@ contextBridge.exposeInMainWorld('atlas', {
   recomecar: (id) => ipcRenderer.invoke('recomecar', id),
   escrever: (id, dados) => ipcRenderer.invoke('escrever', id, dados),
   microfone: () => ipcRenderer.invoke('microfone'),
-  // O claude perguntou que terminal é (XTVERSION): o main responde xterm.js, direto no pty.
-  identificarTerminal: (id) => ipcRenderer.invoke('identificarTerminal', id),
   // Miniatura (data URL ou null) da imagem na área de transferência ou de um arquivo de imagem.
   miniaturaDaArea: () => ipcRenderer.invoke('miniaturaDaArea'),
   miniaturaDoArquivo: (caminho) => ipcRenderer.invoke('miniaturaDoArquivo', caminho),

@@ -741,15 +741,6 @@ function criarGerente(opcoes) {
     return true;
   }
 
-  // Resposta do terminal ao XTVERSION do claude ("que terminal é você?"): vai direto ao pty,
-  // sem passar por escrever(), então não conta como tecla na caixa nem marca a sessão como
-  // vista. 🔴 A versão acompanha o @xterm/xterm do package.json.
-  const IDENTIDADE = '\x1bP>|xterm.js(6.0.0)\x1b\\';
-  function identificarTerminal(id) {
-    const r = rt.get(id);
-    if (r && r.pty) r.pty.escrever(IDENTIDADE);
-  }
-
   function escrever(id, dados) {
     const r = rt.get(id);
     if (!r || !r.pty) return;
@@ -1003,7 +994,7 @@ function criarGerente(opcoes) {
   }
 
   return {
-    listar, nova, selecionar, fechar, retomar, recomecar, escrever, identificarTerminal, microfone, redimensionar, marcarFoco, marcarPagina,
+    listar, nova, selecionar, fechar, retomar, recomecar, escrever, microfone, redimensionar, marcarFoco, marcarPagina,
     restaurar, encerrarTudo, contarAtivas, aoMudarEventos, recalcular, renomear, definirTitulo, trocarCor,
     listarGrupos, criarGrupo, renomearGrupo, descreverGrupo, apagarGrupo, moverParaGrupo, listarFechadas, reabrirFechada,
     estatisticas, contarVermelhos, lerConfig, definirConfig,

@@ -27,13 +27,7 @@ function linhaDeComando(argv) {
 function proibida(nome) {
   return nome === 'CLAUDECODE' || nome.startsWith('CLAUDE_CODE_') || nome === 'CLAUDE_PID' ||
     nome.startsWith('ATLAS_') ||
-    ['PWD', 'OLDPWD', 'SHLVL', '_'].includes(nome) ||
-    // O terminal da sessão é o xterm.js do Atlas, não o terminal de onde o Atlas foi aberto
-    // (Terminal, iTerm, VS Code, Cursor, kitty, Ghostty, Windows Terminal, tmux, screen,
-    // zellij): o claude lê essas pistas para escolher rolagem e desenho.
-    ['TERM_PROGRAM', 'TERM_PROGRAM_VERSION', 'TERM_SESSION_ID', 'CURSOR_TRACE_ID', 'ITERM_SESSION_ID',
-      'LC_TERMINAL', 'LC_TERMINAL_VERSION', 'KITTY_WINDOW_ID', 'WT_SESSION', 'TMUX', 'TMUX_PANE', 'STY'].includes(nome) ||
-    nome.startsWith('VSCODE_') || nome.startsWith('GHOSTTY_') || nome.startsWith('ZELLIJ');
+    ['PWD', 'OLDPWD', 'SHLVL', '_'].includes(nome);
 }
 
 function limpar(env) {
@@ -121,9 +115,6 @@ function ambiente(sessao, base = ambienteDoUsuario()) {
     ATLAS_SESSAO_ID: sessao.id,
     TERM: 'xterm-256color',
     COLORTERM: 'truecolor',
-    // Caixa de digitar fixa no rodapé (o /tui fullscreen do claude) em todas as sessões do Atlas.
-    // Para voltar ao modo antigo numa sessão: /tui classic.
-    CLAUDE_CODE_NO_FLICKER: '1',
   };
 }
 

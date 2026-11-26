@@ -85,11 +85,11 @@
     return c.salva === false ? 'não salva' : '';
   }
 
-  // Miniaturas das imagens coladas. A caixa do claude (no /tui fullscreen) fica entre as duas
-  // últimas linhas feitas de ─ na tela, com o "❯" na primeira linha; dentro dela cada imagem
+  // Miniaturas das imagens coladas. A caixa do claude fica entre as duas últimas linhas
+  // feitas de ─ na tela, com o "❯" na primeira linha; dentro dela cada imagem
   // aparece como "[Image #N]". linhas: o texto da tela, de cima para baixo. Devolve
   // { topo, base, texto } ou null quando não há caixa à vista (pergunta, menu "❯ 1. Sim", ou
-  // modo classic com a caixa fora da tela).
+  // a caixa fora da tela, com a conversa rolada para cima).
   const REGUA = /^─{20,}$/;
   function caixaDoClaude(linhas) {
     const reguas = [];
