@@ -118,6 +118,9 @@ function ambiente(sessao, base = ambienteDoUsuario()) {
     // Caixa de digitar fixa no rodapé (o /tui fullscreen do claude) em todas as sessões do Atlas.
     // Para voltar ao modo antigo numa sessão: /tui classic.
     CLAUDE_CODE_NO_FLICKER: '1',
+    // No fullscreen quem rola é o claude. Ele não reconhece o xterm.js do Atlas (não responde ao
+    // XTVERSION) e cai em 1 linha por giro; 3 é o que ele usa quando reconhece. Vai de 1 a 20.
+    CLAUDE_CODE_SCROLL_SPEED: '3',
   };
 }
 
