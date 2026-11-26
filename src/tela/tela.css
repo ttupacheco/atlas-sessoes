@@ -195,19 +195,19 @@ kbd { font: 11px var(--fonte-ui); color: var(--dica); }
   50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--vermelho) 0%, transparent); }
 }
 @media (prefers-reduced-motion: reduce) { .botao-microfone--gravando { animation: none; } }
-/* Miniaturas das imagens coladas, logo acima da caixa do claude (tela.js conferirMiniaturas). */
+/* Miniaturas das imagens coladas, junto da caixa do claude (tela.js conferirMiniaturas). */
 .miniaturas {
-  position: absolute; z-index: 5; display: flex; gap: 6px; padding: 5px;
+  position: absolute; z-index: 5; display: flex; gap: 5px; padding: 4px;
   border: 1px solid var(--linha-forte); border-radius: 10px; background: var(--painel-alto);
 }
 .miniaturas[hidden] { display: none; }
 .miniatura { position: relative; margin: 0; }
 .miniatura img {
-  display: block; height: 52px; max-width: 104px; object-fit: cover; border-radius: 6px;
+  display: block; height: 40px; max-width: 80px; object-fit: cover; border-radius: 6px;
   transform-origin: bottom left; transition: transform .15s ease-out;
 }
 .miniatura:hover { z-index: 1; }
-.miniatura:hover img { transform: scale(2.6); box-shadow: 0 6px 24px rgb(0 0 0 / .45); }
+.miniatura:hover img { transform: scale(3.2); box-shadow: 0 6px 24px rgb(0 0 0 / .45); }
 .miniatura__numero {
   position: absolute; left: 4px; bottom: 4px; padding: 0 4px; border-radius: 4px;
   background: color-mix(in srgb, var(--grafite) 80%, transparent); color: var(--giz);

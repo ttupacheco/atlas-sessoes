@@ -209,13 +209,20 @@ function emMiniatura(img) {
 // imagem vem como Blob (não há mais clipboard.readImage()).
 ipcMain.handle('miniaturaDaArea', async () => {
   try {
+    // PNG e JPEG primeiro (os que o nativeImage lê de um buffer); um tipo que não abre passa
+    // para o seguinte.
+    const ordem = (t) => (t === 'image/png' ? 0 : t === 'image/jpeg' ? 1 : 2);
     for (const item of await clipboard.read()) {
-      const tipo = item.types.find((t) => t.startsWith('image/'));
-      if (!tipo) continue;
-      const blob = await item.getType(tipo);
-      return emMiniatura(nativeImage.createFromBuffer(Buffer.from(await blob.arrayBuffer())));
+      const tipos = item.types.filter((t) => t.startsWith('image/')).sort((a, b) => ordem(a) - ordem(b));
+      for (const tipo of tipos) {
+        try {
+          const blob = await item.getType(tipo);
+          const miniatura = emMiniatura(nativeImage.createFromBuffer(Buffer.from(await blob.arrayBuffer())));
+          if (miniatura) return miniatura;
+        } catch { /* esse tipo não abriu: tenta o próximo */ }
+      }
     }
-  } catch { /* sem imagem ou formato que o nativeImage não lê */ }
+  } catch { /* área de transferência ilegível */ }
   return null;
 });
 ipcMain.handle('miniaturaDoArquivo', async (_e, caminho) => {

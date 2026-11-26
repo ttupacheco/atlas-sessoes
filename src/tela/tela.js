@@ -65,6 +65,8 @@ function criarTerminal(id) {
     webgl.onContextLoss(() => webgl.dispose());
     term.loadAddon(webgl);
   } catch { /* sem WebGL: fica o DOM */ }
+  // Rolar a conversa esconde ou devolve a faixa das miniaturas.
+  term.onScroll(() => { if (id === selecionadaId) conferirGravando(); });
   term.onData((d) => ponte.escrever(id, d));
   term.onBinary((d) => ponte.escrever(id, d));
   term.attachCustomKeyEventHandler((ev) => {
@@ -207,7 +209,8 @@ ponte.aoMicrofone(tocarMicrofone);
 // some e o estado fica, porque o rascunho volta depois.
 const faixaMiniaturas = $('miniaturas');
 const imagensPorSessao = new Map(); // id -> { porNumero, coladas }
-let faixaDesenhada = '';
+let faixaDesenhada = ''; // posição da faixa
+let faixaLista = ''; // números e coladas desenhados (refaz as imagens só quando mudam)
 
 let timerAusencia = 0;
 
@@ -216,10 +219,12 @@ function estadoImagens(id) {
   return imagensPorSessao.get(id);
 }
 
+// A tela de agora (a do fim), mesmo com a conversa rolada para cima: a caixa do claude está
+// sempre nela (como em lerMicrofone).
 function linhasDaTela(t) {
   const b = t.term.buffer.active;
   const linhas = [];
-  for (let i = b.viewportY; i < b.viewportY + t.term.rows; i++) {
+  for (let i = b.baseY; i < b.baseY + t.term.rows; i++) {
     const linha = b.getLine(i);
     linhas.push(linha ? linha.translateToString(true) : '');
   }
@@ -252,6 +257,7 @@ function guardarColada(id, promessa) {
 function esconderMiniaturas() {
   faixaMiniaturas.hidden = true;
   faixaDesenhada = '';
+  faixaLista = '';
 }
 
 function conferirMiniaturas(t) {
@@ -266,25 +272,37 @@ function conferirMiniaturas(t) {
   clearTimeout(timerAusencia);
   if (esperando) timerAusencia = setTimeout(conferirGravando, AUSENCIA + 50);
   const lista = ligadas.filter(([, c]) => c.imagem);
-  if (!lista.length) return esconderMiniaturas();
+  // Conversa rolada para cima: a caixa não está à vista, a faixa espera a volta ao fim.
+  const b = t.term.buffer.active;
+  if (!lista.length || b.viewportY !== b.baseY) return esconderMiniaturas();
+  const chaveLista = lista.map(([n, c]) => n + ':' + c.t).join(',');
+  if (chaveLista !== faixaLista || faixaMiniaturas.hidden) {
+    faixaLista = chaveLista;
+    faixaMiniaturas.replaceChildren(...lista.map(([n, c]) => {
+      const item = el('figure', 'miniatura');
+      const img = document.createElement('img');
+      img.src = c.imagem;
+      img.alt = `Imagem #${n}`;
+      item.append(img, el('figcaption', 'miniatura__numero', `#${n}`));
+      return item;
+    }));
+    faixaMiniaturas.hidden = false;
+  }
+  // Posição: logo abaixo da caixa, por cima do rodapé (modelo, modo), para não tampar o fim
+  // da resposta; sem espaço embaixo, encostada em cima da régua de cima. Só a posição muda
+  // enquanto o claude escreve e a caixa desce.
   const tela = t.el.querySelector('.xterm-screen');
   const alturaLinha = tela ? tela.getBoundingClientRect().height / t.term.rows : 0;
-  const chave = lista.map(([n, c]) => n + ':' + c.t).join(',') + '@' + caixa.topo + 'x' + alturaLinha.toFixed(1);
-  if (chave === faixaDesenhada && !faixaMiniaturas.hidden) return;
-  faixaDesenhada = chave;
-  faixaMiniaturas.replaceChildren(...lista.map(([n, c]) => {
-    const item = el('figure', 'miniatura');
-    const img = document.createElement('img');
-    img.src = c.imagem;
-    img.alt = `Imagem #${n}`;
-    item.append(img, el('figcaption', 'miniatura__numero', `#${n}`));
-    return item;
-  }));
-  faixaMiniaturas.hidden = false;
-  // Encostada em cima da régua de cima da caixa, alinhada à esquerda do terminal.
-  faixaMiniaturas.style.left = t.el.offsetLeft + 'px';
-  const topo = t.el.offsetTop + caixa.topo * alturaLinha - faixaMiniaturas.offsetHeight - 6;
-  faixaMiniaturas.style.top = Math.max(0, topo) + 'px';
+  const altura = faixaMiniaturas.offsetHeight;
+  const embaixo = t.el.offsetTop + (caixa.base + 1) * alturaLinha + 2;
+  const limite = $('terminais').clientHeight;
+  const topo = embaixo + altura <= limite ? embaixo : t.el.offsetTop + caixa.topo * alturaLinha - altura - 4;
+  const posicao = Math.round(Math.max(0, topo)) + 'px';
+  if (faixaDesenhada !== posicao) {
+    faixaDesenhada = posicao;
+    faixaMiniaturas.style.left = t.el.offsetLeft + 'px';
+    faixaMiniaturas.style.top = posicao;
+  }
 }
 
 // Clique na faixa não tira o foco do terminal (como o botão do microfone).
