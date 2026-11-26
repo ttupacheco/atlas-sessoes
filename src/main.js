@@ -206,8 +206,18 @@ function emMiniatura(img) {
   const menor = escala < 1 ? img.resize({ width: Math.round(width * escala), height: Math.round(height * escala), quality: 'good' }) : img;
   return menor.toDataURL();
 }
-ipcMain.handle('miniaturaDaArea', () => {
-  try { return emMiniatura(clipboard.readImage()); } catch { return null; }
+// No Electron 45 a área de transferência é a da web: clipboard.read() devolve itens, e a
+// imagem vem como Blob (não há mais clipboard.readImage()).
+ipcMain.handle('miniaturaDaArea', async () => {
+  try {
+    for (const item of await clipboard.read()) {
+      const tipo = item.types.find((t) => t.startsWith('image/'));
+      if (!tipo) continue;
+      const blob = await item.getType(tipo);
+      return emMiniatura(nativeImage.createFromBuffer(Buffer.from(await blob.arrayBuffer())));
+    }
+  } catch { /* sem imagem ou formato que o nativeImage não lê */ }
+  return null;
 });
 ipcMain.handle('miniaturaDoArquivo', async (_e, caminho) => {
   const c = texto(caminho);
