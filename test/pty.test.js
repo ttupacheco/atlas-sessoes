@@ -86,3 +86,19 @@ test('resolverAmbiente de verdade com o ambiente mínimo do Dock acha o claude',
   const achado = execFileSync('/bin/zsh', ['-l', '-c', 'command -v claude'], { env: ambiente({ id: 'teste123' }, r.env), encoding: 'utf8' }).trim();
   assert.match(achado, /\/claude$/);
 });
+
+test('ambiente da sessão não herda as pistas do terminal de onde o Atlas foi aberto', () => {
+  const { ambiente } = require('../src/pty.js');
+  const env = ambiente({ id: 'abc' }, {
+    PATH: '/usr/bin', TERM_PROGRAM: 'Apple_Terminal', TERM_PROGRAM_VERSION: '455', TERM_SESSION_ID: 'x',
+    VSCODE_GIT_ASKPASS_MAIN: '/c', CURSOR_TRACE_ID: '1', ITERM_SESSION_ID: 'w', LC_TERMINAL: 'iTerm2',
+    TMUX: '/tmp/t', TMUX_PANE: '%1', STY: 's', ZELLIJ: '0', ZELLIJ_SESSION_NAME: 'z', WT_SESSION: 'w',
+    KITTY_WINDOW_ID: '1', GHOSTTY_RESOURCES_DIR: '/g',
+  });
+  for (const k of ['TERM_PROGRAM', 'TERM_PROGRAM_VERSION', 'TERM_SESSION_ID', 'VSCODE_GIT_ASKPASS_MAIN', 'CURSOR_TRACE_ID',
+    'ITERM_SESSION_ID', 'LC_TERMINAL', 'TMUX', 'TMUX_PANE', 'STY', 'ZELLIJ', 'ZELLIJ_SESSION_NAME', 'WT_SESSION',
+    'KITTY_WINDOW_ID', 'GHOSTTY_RESOURCES_DIR']) assert.equal(env[k], undefined, k);
+  assert.equal(env.PATH, '/usr/bin');
+  assert.equal(env.TERM, 'xterm-256color');
+  assert.equal(env.CLAUDE_CODE_NO_FLICKER, '1');
+});

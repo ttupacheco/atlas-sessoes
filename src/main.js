@@ -194,6 +194,7 @@ ipcMain.handle('retomar', (_e, id) => gerente.retomar(texto(id)));
 ipcMain.handle('recomecar', (_e, id) => gerente.recomecar(texto(id)));
 ipcMain.handle('escrever', (_e, id, dados) => gerente.escrever(texto(id), texto(dados)));
 ipcMain.handle('microfone', () => gerente.microfone());
+ipcMain.handle('identificarTerminal', (_e, id) => gerente.identificarTerminal(texto(id)));
 // Miniatura da imagem colada ou arrastada, para a faixa acima da caixa do claude. Só lê:
 // o claude pega a imagem de verdade sozinho (⌃V lê a área de transferência, o caminho vira
 // imagem). Volta um data URL pequeno ou null.

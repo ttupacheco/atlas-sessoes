@@ -65,6 +65,13 @@ function criarTerminal(id) {
     webgl.onContextLoss(() => webgl.dispose());
     term.loadAddon(webgl);
   } catch { /* sem WebGL: fica o DOM */ }
+  // XTVERSION (CSI > 0 q): o xterm.js não responde, e sem resposta o claude não sabe que é um
+  // xterm.js. Respondendo, ele usa o modo feito para o xterm.js (o do VS Code): rolagem do
+  // fullscreen com 3 linhas por giro e aceleração suave, e o redesenho certo para este terminal.
+  term.parser.registerCsiHandler({ prefix: '>', final: 'q' }, (params) => {
+    if (params.length <= 1 && !params[0]) ponte.identificarTerminal(id);
+    return true;
+  });
   term.onData((d) => ponte.escrever(id, d));
   term.onBinary((d) => ponte.escrever(id, d));
   term.attachCustomKeyEventHandler((ev) => {
