@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, Notification, nativeImage, nativeTheme, shell } = require('electron');
+const { app, BrowserWindow, clipboard, ipcMain, dialog, Menu, Notification, nativeImage, nativeTheme, shell } = require('electron');
 const os = require('node:os');
 const path = require('node:path');
 const { criarGerente, textoConfirmacao, contarVermelhosDe } = require('./gerente.js');
@@ -194,6 +194,25 @@ ipcMain.handle('retomar', (_e, id) => gerente.retomar(texto(id)));
 ipcMain.handle('recomecar', (_e, id) => gerente.recomecar(texto(id)));
 ipcMain.handle('escrever', (_e, id, dados) => gerente.escrever(texto(id), texto(dados)));
 ipcMain.handle('microfone', () => gerente.microfone());
+// Miniatura da imagem colada ou arrastada, para a faixa acima da caixa do claude. Só lê:
+// o claude pega a imagem de verdade sozinho (⌃V lê a área de transferência, o caminho vira
+// imagem). Volta um data URL pequeno ou null.
+const LADO_MINIATURA = 256;
+function emMiniatura(img) {
+  if (!img || img.isEmpty()) return null;
+  const { width, height } = img.getSize();
+  const escala = Math.min(1, LADO_MINIATURA / Math.max(width, height));
+  const menor = escala < 1 ? img.resize({ width: Math.round(width * escala), height: Math.round(height * escala), quality: 'good' }) : img;
+  return menor.toDataURL();
+}
+ipcMain.handle('miniaturaDaArea', () => {
+  try { return emMiniatura(clipboard.readImage()); } catch { return null; }
+});
+ipcMain.handle('miniaturaDoArquivo', async (_e, caminho) => {
+  const c = texto(caminho);
+  if (!path.isAbsolute(c) || !/\.(png|jpe?g|gif|webp)$/i.test(c)) return null;
+  try { return emMiniatura(await nativeImage.createThumbnailFromPath(c, { width: LADO_MINIATURA, height: LADO_MINIATURA })); } catch { return null; }
+});
 ipcMain.handle('redimensionar', (_e, id, cols, rows) => gerente.redimensionar(texto(id), cols, rows));
 ipcMain.handle('renomear', (_e, id, nome) => {
   if (nome === null || curto(nome, 80)) gerente.renomear(texto(id), nome);

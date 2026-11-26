@@ -85,7 +85,71 @@
     return c.salva === false ? 'não salva' : '';
   }
 
-  const api = { tempoRelativo, caminhosArrastados, atalho, pastaCurta, agruparCartoes, formatarDuracao, textoSalvar };
+  // Miniaturas das imagens coladas. A caixa do claude (no /tui fullscreen) fica entre as duas
+  // últimas linhas feitas de ─ na tela, com o "❯" na primeira linha; dentro dela cada imagem
+  // aparece como "[Image #N]". linhas: o texto da tela, de cima para baixo. Devolve
+  // { topo, base, texto } ou null quando não há caixa à vista (pergunta, menu "❯ 1. Sim", ou
+  // modo classic com a caixa fora da tela).
+  const REGUA = /^─{20,}$/;
+  function caixaDoClaude(linhas) {
+    const reguas = [];
+    for (let i = linhas.length - 1; i >= 0 && reguas.length < 2; i--) {
+      if (REGUA.test(String(linhas[i] || '').trim())) reguas.unshift(i);
+    }
+    if (reguas.length < 2) return null;
+    const [topo, base] = reguas;
+    const primeira = String(linhas[topo + 1] || '').trimStart();
+    if (base - topo < 2 || !primeira.startsWith('❯')) return null;
+    // Menu de opções ("❯ 1. Sim" e mais uma opção numerada embaixo) não é a caixa; um pedido
+    // que começa com "1. faz isso" é.
+    const opcao = /^\s*\d+\.\s/;
+    if (opcao.test(primeira.slice(1)) && linhas.slice(topo + 2, base).some((l) => opcao.test(String(l)))) return null;
+    // Linhas juntas com espaço: o claude quebra o texto longo nos espaços ("[Image" / "#1]").
+    return { topo, base, texto: linhas.slice(topo + 1, base).join(' ') };
+  }
+
+  function numerosDeImagem(texto) {
+    const out = new Set();
+    for (const m of String(texto).matchAll(/\[Image\s+#(\d+)\]/g)) out.add(Number(m[1]));
+    return out;
+  }
+
+  // Liga cada "[Image #N]" que surge na caixa à imagem colada há menos de VALIDADE_COLADA, na
+  // ordem em que foram coladas. Número que já estava na caixa sem miniatura (pedido antigo do
+  // ↑, colada vencida) nunca pega colada nova. Número que some da caixa (enviado, apagado, ⌃C,
+  // ⌃U) só sai depois de AUSENCIA sem voltar: um quadro desenhado pela metade não apaga nada.
+  // estado = { porNumero: Map(n -> colada), coladas: [colada], vistos: Set(n), ausentes:
+  // Map(n -> desde) }, alterado no lugar; colada = { imagem, t }, com imagem null enquanto a
+  // miniatura é feita. Devolve { lista: [[n, colada], ...] em ordem de número, esperando: há
+  // número em ausência (conferir de novo depois de AUSENCIA) }.
+  const VALIDADE_COLADA = 8000; // print grande no ⌃V: o claude demora a desenhar o número
+  const AUSENCIA = 400;
+  function ligarMiniaturas(estado, numeros, agora) {
+    estado.coladas = estado.coladas.filter((c) => agora - c.t <= VALIDADE_COLADA);
+    for (const n of [...estado.vistos]) {
+      if (numeros.has(n)) { estado.ausentes.delete(n); continue; }
+      if (!estado.ausentes.has(n)) estado.ausentes.set(n, agora);
+      else if (agora - estado.ausentes.get(n) >= AUSENCIA) {
+        estado.vistos.delete(n);
+        estado.porNumero.delete(n);
+        estado.ausentes.delete(n);
+      }
+    }
+    for (const n of [...numeros].sort((a, b) => a - b)) {
+      if (estado.vistos.has(n)) continue;
+      estado.vistos.add(n);
+      if (estado.coladas.length) estado.porNumero.set(n, estado.coladas.shift());
+    }
+    const lista = [...estado.porNumero.entries()].sort((a, b) => a[0] - b[0]);
+    return { lista, esperando: estado.ausentes.size > 0 };
+  }
+
+  // Arquivo arrastado que o claude transforma em "[Image #N]" (testado no 2.1.332: HEIC, BMP
+  // e TIFF ficam como caminho; e com um deles no meio, nenhum do grupo vira imagem).
+  const ehImagem = (caminho) => /\.(png|jpe?g|gif|webp)$/i.test(String(caminho));
+
+  const api = { tempoRelativo, caminhosArrastados, atalho, pastaCurta, agruparCartoes, formatarDuracao, textoSalvar,
+    caixaDoClaude, numerosDeImagem, ligarMiniaturas, ehImagem, VALIDADE_COLADA, AUSENCIA };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else raiz.AtlasUtil = api;
 })(globalThis);

@@ -139,3 +139,80 @@ test('I1: textoSalvar avisa quando o /salvar não terminou; salvando e rascunho 
   assert.equal(textoSalvar({ salva: false, salvando: null, rascunho: true, falhaSalvar: true }), 'rascunho na caixa, apague com ⌃U e tente de novo');
   assert.equal(textoSalvar({ salva: true, salvando: null, falhaSalvar: false }), '');
 });
+
+test('caixa do claude: entre as duas últimas réguas, com o ❯', () => {
+  const { caixaDoClaude } = require('../src/tela/util.js');
+  const r = '─'.repeat(100);
+  const tela = ['', 'você: [Image #1] antigo', r, '❯ oi [Image', '  #2] e mais', r, '  Opus 5.5 · atlas'];
+  assert.deepEqual(caixaDoClaude(tela), { topo: 2, base: 5, texto: '❯ oi [Image   #2] e mais' });
+  assert.equal(caixaDoClaude(['', 'Quer rodar este comando?', '❯ 1. Sim']), null);
+  assert.equal(caixaDoClaude([r, 'só uma régua']), null);
+  // diálogo entre duas réguas (ou um --- da conversa): não é a caixa
+  assert.equal(caixaDoClaude([r, ' Quer rodar?', '❯ 1. Sim', r]), null);
+  assert.equal(caixaDoClaude([r, '❯ 1. Sim', '  2. Não', r]), null);
+  // pedido que começa com lista numerada é a caixa
+  assert.equal(caixaDoClaude([r, '❯ 1. faz isso [Image #1]', r]).texto, '❯ 1. faz isso [Image #1]');
+  assert.equal(caixaDoClaude([r, 'texto da resposta', r]), null);
+});
+
+test('números de imagem na caixa, mesmo com a quebra de linha', () => {
+  const { numerosDeImagem } = require('../src/tela/util.js');
+  assert.deepEqual([...numerosDeImagem('❯ oi [Image #1] e [Image #12] [Image   #3] [Image #1]')], [1, 12, 3]);
+  assert.equal(numerosDeImagem('❯ sem imagem').size, 0);
+});
+
+const novoEstado = (coladas = []) => ({ porNumero: new Map(), coladas, vistos: new Set(), ausentes: new Map() });
+
+test('miniaturas: número novo pega a colada mais antiga; sai depois da ausência', () => {
+  const { ligarMiniaturas, AUSENCIA } = require('../src/tela/util.js');
+  const a = { imagem: 'a', t: 1000 };
+  const b = { imagem: 'b', t: 1100 };
+  const est = novoEstado([a, b]);
+  assert.deepEqual(ligarMiniaturas(est, new Set([3]), 1200).lista, [[3, a]]);
+  assert.deepEqual(ligarMiniaturas(est, new Set([3, 4]), 1300).lista, [[3, a], [4, b]]);
+  // #3 apagada: fica durante a ausência, sai depois
+  const r = ligarMiniaturas(est, new Set([4]), 1400);
+  assert.deepEqual(r.lista, [[3, a], [4, b]]);
+  assert.equal(r.esperando, true);
+  assert.deepEqual(ligarMiniaturas(est, new Set([4]), 1400 + AUSENCIA).lista, [[4, b]]);
+  // quadro pela metade: some e volta antes da ausência vencer
+  assert.deepEqual(ligarMiniaturas(est, new Set(), 2000).lista, [[4, b]]);
+  const volta = ligarMiniaturas(est, new Set([4]), 2100);
+  assert.deepEqual(volta.lista, [[4, b]]);
+  assert.equal(volta.esperando, false);
+});
+
+test('miniaturas: número que já estava sem miniatura não pega a colada nova', () => {
+  const { ligarMiniaturas } = require('../src/tela/util.js');
+  const est = novoEstado();
+  assert.deepEqual(ligarMiniaturas(est, new Set([1]), 1000).lista, []); // pedido antigo do ↑
+  const nova = { imagem: 'n', t: 1100 };
+  est.coladas.push(nova);
+  assert.deepEqual(ligarMiniaturas(est, new Set([1]), 1150).lista, []); // claude ainda não desenhou
+  assert.deepEqual(ligarMiniaturas(est, new Set([1, 2]), 1200).lista, [[2, nova]]);
+});
+
+test('miniaturas: colada vencida não liga', () => {
+  const { ligarMiniaturas, VALIDADE_COLADA } = require('../src/tela/util.js');
+  const est = novoEstado([{ imagem: 'v', t: 0 }]);
+  assert.deepEqual(ligarMiniaturas(est, new Set([1]), VALIDADE_COLADA + 1).lista, []);
+  assert.equal(est.coladas.length, 0);
+});
+
+test('arquivo arrastado que o claude transforma em imagem', () => {
+  const { ehImagem } = require('../src/tela/util.js');
+  assert.ok(ehImagem('/Users/x/Print 1.PNG'));
+  assert.ok(ehImagem('/a/foto.jpeg'));
+  assert.ok(!ehImagem('/a/foto.heic'));
+  assert.ok(!ehImagem('/a/planilha.xlsx'));
+});
+
+test('miniaturas: primeira colagem da sessão com número antigo já na caixa', () => {
+  const { ligarMiniaturas } = require('../src/tela/util.js');
+  const est = novoEstado();
+  // como guardarColada: registra a caixa antes de enfileirar
+  ligarMiniaturas(est, new Set([1]), 1000);
+  const nova = { imagem: 'n', t: 1000 };
+  est.coladas.push(nova);
+  assert.deepEqual(ligarMiniaturas(est, new Set([1, 2]), 1100).lista, [[2, nova]]);
+});

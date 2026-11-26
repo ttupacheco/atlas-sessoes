@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
   <title>Atlas</title>
   <link rel="stylesheet" href="../../node_modules/@xterm/xterm/css/xterm.css">
   <link rel="stylesheet" href="../../node_modules/@fontsource/inter/400.css">
@@ -40,6 +40,7 @@
       <span class="cabecalho__pasta" id="cab-pasta"></span>
     </header>
     <div class="terminais" id="terminais">
+      <div class="miniaturas" id="miniaturas" aria-label="Imagens no pedido" hidden></div>
       <button class="botao-microfone" id="botao-microfone" type="button" title="Falar (⌘D): clique para gravar, clique de novo para enviar" aria-label="Falar (⌘D)" aria-pressed="false" hidden>
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
       </button>

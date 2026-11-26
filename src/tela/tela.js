@@ -1,7 +1,8 @@
 // Tela do Atlas: cartões das sessões à esquerda, terminal da sessão escolhida à direita.
 'use strict';
 
-const { tempoRelativo, caminhosArrastados, atalho, pastaCurta, agruparCartoes, formatarDuracao, textoSalvar } = window.AtlasUtil;
+const { tempoRelativo, caminhosArrastados, atalho, pastaCurta, agruparCartoes, formatarDuracao, textoSalvar,
+  caixaDoClaude, numerosDeImagem, ligarMiniaturas, ehImagem, AUSENCIA } = window.AtlasUtil;
 const { limparTitulo } = window.AtlasNome;
 const ponte = window.atlas; // "atlas" já é global (contextBridge)
 const $ = (id) => document.getElementById(id);
@@ -66,7 +67,13 @@ function criarTerminal(id) {
   } catch { /* sem WebGL: fica o DOM */ }
   term.onData((d) => ponte.escrever(id, d));
   term.onBinary((d) => ponte.escrever(id, d));
-  term.attachCustomKeyEventHandler((ev) => !atalho(ev));
+  term.attachCustomKeyEventHandler((ev) => {
+    // ⌃V: o claude cola a imagem da área de transferência; o Atlas guarda a miniatura dela.
+    if (ev.type === 'keydown' && ev.ctrlKey && !ev.metaKey && !ev.altKey && ev.key.toLowerCase() === 'v') {
+      guardarColada(id, ponte.miniaturaDaArea());
+    }
+    return !atalho(ev);
+  });
   const t = { term, fit, el, cols: 0, rows: 0, titulo: null, pendente: null, timerTitulo: null };
   // Título que o claude põe no terminal (OSC 0/2). Vale também para os terminais escondidos.
   term.onTitleChange((bruto) => avisarTitulo(id, t, bruto));
@@ -174,6 +181,7 @@ function conferirGravando() {
     botaoMicrofone.classList.toggle('botao-microfone--gravando', estadoMicrofone === 'gravando');
     botaoMicrofone.setAttribute('aria-pressed', String(estadoMicrofone === 'gravando'));
     botaoMicrofone.setAttribute('aria-label', estadoMicrofone === 'gravando' ? 'Parar e enviar (⌘D)' : 'Falar (⌘D)');
+    conferirMiniaturas(viva ? t : null);
   });
 }
 
@@ -191,6 +199,109 @@ function tocarMicrofone() {
 botaoMicrofone.addEventListener('mousedown', (ev) => ev.preventDefault()); // não tira o foco do terminal
 botaoMicrofone.addEventListener('click', tocarMicrofone);
 ponte.aoMicrofone(tocarMicrofone);
+
+// Miniaturas das imagens coladas: faixa logo acima da caixa do claude na sessão selecionada.
+// A caixa diz quais "[Image #N]" estão no pedido; cada número novo pega a imagem colada (⌃V,
+// ⌘V com imagem, arquivo de imagem arrastado) mais antiga ainda sem número. Pedido enviado ou
+// imagem apagada da caixa: a miniatura sai. Sem caixa à vista (pergunta, menu), a faixa só
+// some e o estado fica, porque o rascunho volta depois.
+const faixaMiniaturas = $('miniaturas');
+const imagensPorSessao = new Map(); // id -> { porNumero, coladas }
+let faixaDesenhada = '';
+
+let timerAusencia = 0;
+
+function estadoImagens(id) {
+  if (!imagensPorSessao.has(id)) imagensPorSessao.set(id, { porNumero: new Map(), coladas: [], vistos: new Set(), ausentes: new Map() });
+  return imagensPorSessao.get(id);
+}
+
+function linhasDaTela(t) {
+  const b = t.term.buffer.active;
+  const linhas = [];
+  for (let i = b.viewportY; i < b.viewportY + t.term.rows; i++) {
+    const linha = b.getLine(i);
+    linhas.push(linha ? linha.translateToString(true) : '');
+  }
+  return linhas;
+}
+
+// promessa: data URL (ou null) da miniatura. A colada entra na fila na hora, para valer a
+// ordem das colagens; sem imagem, sai da fila e do número que tiver pego.
+function guardarColada(id, promessa) {
+  // Sem a caixa à vista (pergunta, menu) a colagem não vira imagem no pedido.
+  const t = terminais.get(id);
+  const caixa = t && caixaDoClaude(linhasDaTela(t));
+  if (!caixa) return;
+  const est = estadoImagens(id);
+  // Registra o que já está na caixa antes de a colada entrar: um "[Image #N]" antigo (pedido
+  // do ↑, número que entrou com a faixa sem varrer) não pode pegar a imagem nova.
+  ligarMiniaturas(est, numerosDeImagem(caixa.texto), Date.now());
+  const colada = { imagem: null, t: Date.now() };
+  est.coladas.push(colada);
+  Promise.resolve(promessa).catch(() => null).then((imagem) => {
+    if (imagem) colada.imagem = imagem;
+    else {
+      est.coladas = est.coladas.filter((c) => c !== colada);
+      for (const [n, c] of est.porNumero) if (c === colada) est.porNumero.delete(n);
+    }
+    if (id === selecionadaId) conferirGravando();
+  });
+}
+
+function esconderMiniaturas() {
+  faixaMiniaturas.hidden = true;
+  faixaDesenhada = '';
+}
+
+function conferirMiniaturas(t) {
+  if (!t || pagina) return esconderMiniaturas();
+  const est = imagensPorSessao.get(selecionadaId);
+  // Sessão que nunca colou imagem: nada a ler.
+  if (!est) return esconderMiniaturas();
+  const caixa = caixaDoClaude(linhasDaTela(t));
+  if (!caixa) return esconderMiniaturas();
+  const { lista: ligadas, esperando } = ligarMiniaturas(est, numerosDeImagem(caixa.texto), Date.now());
+  // Número sumido da caixa: confere de novo quando a ausência vence, mesmo sem saída nova.
+  clearTimeout(timerAusencia);
+  if (esperando) timerAusencia = setTimeout(conferirGravando, AUSENCIA + 50);
+  const lista = ligadas.filter(([, c]) => c.imagem);
+  if (!lista.length) return esconderMiniaturas();
+  const tela = t.el.querySelector('.xterm-screen');
+  const alturaLinha = tela ? tela.getBoundingClientRect().height / t.term.rows : 0;
+  const chave = lista.map(([n, c]) => n + ':' + c.t).join(',') + '@' + caixa.topo + 'x' + alturaLinha.toFixed(1);
+  if (chave === faixaDesenhada && !faixaMiniaturas.hidden) return;
+  faixaDesenhada = chave;
+  faixaMiniaturas.replaceChildren(...lista.map(([n, c]) => {
+    const item = el('figure', 'miniatura');
+    const img = document.createElement('img');
+    img.src = c.imagem;
+    img.alt = `Imagem #${n}`;
+    item.append(img, el('figcaption', 'miniatura__numero', `#${n}`));
+    return item;
+  }));
+  faixaMiniaturas.hidden = false;
+  // Encostada em cima da régua de cima da caixa, alinhada à esquerda do terminal.
+  faixaMiniaturas.style.left = t.el.offsetLeft + 'px';
+  const topo = t.el.offsetTop + caixa.topo * alturaLinha - faixaMiniaturas.offsetHeight - 6;
+  faixaMiniaturas.style.top = Math.max(0, topo) + 'px';
+}
+
+// Clique na faixa não tira o foco do terminal (como o botão do microfone).
+faixaMiniaturas.addEventListener('mousedown', (ev) => ev.preventDefault());
+
+// ⌘V com só uma imagem na área de transferência: o xterm não teria texto para colar, então
+// o Atlas manda o ⌃V, que é como o claude cola imagem.
+$('terminais').addEventListener('paste', (ev) => {
+  const dados = ev.clipboardData;
+  if (!dados || !selecionadaId || dados.getData('text/plain')) return;
+  const temImagem = [...dados.items].some((i) => i.kind === 'file' && i.type.startsWith('image/'));
+  if (!temImagem) return;
+  ev.preventDefault();
+  ev.stopImmediatePropagation();
+  ponte.escrever(selecionadaId, '\x16');
+  guardarColada(selecionadaId, ponte.miniaturaDaArea());
+}, true);
 
 // Seleção
 
@@ -219,6 +330,7 @@ function sincronizar() {
     t.el.remove();
   }
   for (const id of pendentes.keys()) if (!ids.has(id)) pendentes.delete(id);
+  for (const id of imagensPorSessao.keys()) if (!ids.has(id)) imagensPorSessao.delete(id);
   for (const c of cartoes) if (!terminais.has(c.id)) criarTerminal(c.id);
   if (!ids.has(selecionadaId)) {
     selecionadaId = null;
@@ -604,6 +716,8 @@ areaTerminais.addEventListener('drop', (ev) => {
   areaTerminais.classList.remove('terminais--soltar');
   if (!selecionadaId) return;
   const caminhos = [...ev.dataTransfer.files].map((f) => ponte.caminhoDoArquivo(f));
+  // Só quando todos são imagem: com outro arquivo no meio, o claude não converte nenhum.
+  if (caminhos.length && caminhos.every(ehImagem)) for (const c of caminhos) guardarColada(selecionadaId, ponte.miniaturaDoArquivo(c));
   const texto = caminhosArrastados(caminhos) || ev.dataTransfer.getData('text/plain');
   // Como colar: com bracketed paste o claude reconhece o caminho de imagem.
   if (texto) terminais.get(selecionadaId).term.paste(texto);
@@ -618,6 +732,7 @@ function abrirPagina(nome) {
   if (!TITULOS_PAGINA[nome]) return;
   if (editando) terminarRenomear(true);
   pagina = nome;
+  esconderMiniaturas();
   // O gerente passa a avisar e a não marcar como vista a sessão escondida atrás da página.
   ponte.marcarPagina(true).catch((err) => console.error('marcarPagina:', err));
   document.querySelector('.principal').classList.add('principal--pagina');
@@ -637,6 +752,7 @@ function fecharPagina() {
   // Campo com texto mudado se salva antes de a página sumir (o blur faz isso).
   if ($('pagina').contains(document.activeElement)) document.activeElement.blur();
   pagina = null;
+  conferirGravando(); // miniaturas de volta, se houver
   ponte.marcarPagina(false).catch((err) => console.error('marcarPagina:', err));
   document.querySelector('.principal').classList.remove('principal--pagina');
   $('pagina').hidden = true;

@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld('atlas', {
   recomecar: (id) => ipcRenderer.invoke('recomecar', id),
   escrever: (id, dados) => ipcRenderer.invoke('escrever', id, dados),
   microfone: () => ipcRenderer.invoke('microfone'),
+  // Miniatura (data URL ou null) da imagem na área de transferência ou de um arquivo de imagem.
+  miniaturaDaArea: () => ipcRenderer.invoke('miniaturaDaArea'),
+  miniaturaDoArquivo: (caminho) => ipcRenderer.invoke('miniaturaDoArquivo', caminho),
   redimensionar: (id, cols, rows) => ipcRenderer.invoke('redimensionar', id, cols, rows),
   renomear: (id, nome) => ipcRenderer.invoke('renomear', id, nome),
   definirTitulo: (id, titulo) => ipcRenderer.invoke('definirTitulo', id, titulo),

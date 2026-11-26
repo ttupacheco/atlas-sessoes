@@ -115,6 +115,9 @@ function ambiente(sessao, base = ambienteDoUsuario()) {
     ATLAS_SESSAO_ID: sessao.id,
     TERM: 'xterm-256color',
     COLORTERM: 'truecolor',
+    // Caixa de digitar fixa no rodapé (o /tui fullscreen do claude) em todas as sessões do Atlas.
+    // Para voltar ao modo antigo numa sessão: /tui classic.
+    CLAUDE_CODE_NO_FLICKER: '1',
   };
 }
 
